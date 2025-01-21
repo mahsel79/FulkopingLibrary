@@ -15,10 +15,20 @@ SET @book_type_id = (SELECT media_type_id FROM media_types WHERE type_name = 'Bo
 SET @magazine_type_id = (SELECT media_type_id FROM media_types WHERE type_name = 'Magazine');
 SET @cd_type_id = (SELECT media_type_id FROM media_types WHERE type_name = 'CD');
 
+-- Insert default roles
+INSERT INTO roles (role_name) VALUES
+    ('USER'),
+    ('ADMIN');
+
 -- Insert sample users with hashed passwords and salts
 INSERT INTO users (username, password_hash, salt, name, email) VALUES
     ('alice', 'eJgdIJt0Vcr++PuAu2EQJnycpxisQ0tp3tjXhqp12Ew=', 'D7nMu06E6f6GO786+027Vw==', 'Alice Johnson', 'alice@example.com'),
     ('bob', 't+7WJGIpjUEMxMpGqoZjDNKpAYpUXnXbdnNqx4Y0agE=', 'sjn/a5lOoEN8Nmrkml93uQ==', 'Bob Smith', 'bob@example.com');
+
+-- Assign roles to users
+INSERT INTO user_roles (user_id, role_id) VALUES
+    ((SELECT user_id FROM users WHERE username = 'alice'), (SELECT role_id FROM roles WHERE role_name = 'USER')),
+    ((SELECT user_id FROM users WHERE username = 'bob'), (SELECT role_id FROM roles WHERE role_name = 'ADMIN'));
 
 -- Insert sample books with media_type_id
 INSERT INTO library_items (title, author, type, isbn, is_available, media_type_id) VALUES

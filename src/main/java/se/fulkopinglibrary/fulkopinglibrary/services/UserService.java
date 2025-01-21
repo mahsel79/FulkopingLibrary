@@ -275,11 +275,12 @@ public class UserService {
                             JOIN roles r ON ur.role_id = r.role_id
                             WHERE ur.user_id = ?
                             """;
-                        try (PreparedStatement rolesStatement = connection.prepareStatement(rolesQuery);
-                             ResultSet rolesRs = rolesStatement.executeQuery()) {
+                        try (PreparedStatement rolesStatement = connection.prepareStatement(rolesQuery)) {
                             rolesStatement.setInt(1, rs.getInt("user_id"));
-                            while (rolesRs.next()) {
-                                roles.add(rolesRs.getString("role_name"));
+                            try (ResultSet rolesRs = rolesStatement.executeQuery()) {
+                                while (rolesRs.next()) {
+                                    roles.add(rolesRs.getString("role_name"));
+                                }
                             }
                         }
                     
