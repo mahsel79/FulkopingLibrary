@@ -86,14 +86,8 @@ public class LibraryApp {
                         }
                         break;
                     case 3:
-                        try (Connection connection = DatabaseConnection.getConnection()) {
-                            logger.info("Opening search menu...");
-                            searchMenu(connection, scanner);
-                        } catch (SQLException e) {
-                            logger.severe("Database connection error in search menu: " + e.getMessage());
-                        } finally {
-                            DatabaseConnection.closePool();
-                        }
+                        logger.info("Opening search menu...");
+                        searchMenu(scanner);
                         break;
                     case 4:
                         running = false;
@@ -299,22 +293,23 @@ public class LibraryApp {
         }
     }
 
-    private static void searchMenu(Connection connection, Scanner scanner) throws SQLException {
+    private static void searchMenu(Scanner scanner) {
         boolean searching = true;
         
-        try {
-            while (searching) {
-                System.out.println("\n=== Search Menu ===");
-                System.out.println("1. Search Books");
-                System.out.println("2. Search Magazines");
-                System.out.println("3. Search Media");
-                System.out.println("4. Back to Main Menu");
-                System.out.print("Choose an option: ");
-                int choice = scanner.nextInt();
-                scanner.nextLine(); // Consume newline
-                
+        while (searching) {
+            System.out.println("\n=== Search Menu ===");
+            System.out.println("1. Search Books");
+            System.out.println("2. Search Magazines");
+            System.out.println("3. Search Media");
+            System.out.println("4. Back to Main Menu");
+            System.out.print("Choose an option: ");
+            int choice = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
+            
+            try (Connection connection = DatabaseConnection.getConnection()) {
                 long startTime = System.currentTimeMillis();
                 try {
+                    // Search operations
                     switch (choice) {
                         case 1:
                             logger.info("Searching books...");
@@ -382,10 +377,9 @@ public class LibraryApp {
                 
                 logger.info(String.format("Search operation completed in %d ms", 
                     System.currentTimeMillis() - startTime));
-            }
-        } finally {
-            if (!connection.isClosed()) {
-                connection.close();
+            } catch (SQLException e) {
+                logger.severe("Database connection error in search menu: " + e.getMessage());
+                System.out.println("A database error occurred. Please try again.");
             }
         }
     }
