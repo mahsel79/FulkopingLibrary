@@ -14,12 +14,16 @@ package se.fulkopinglibrary.fulkopinglibrary;
 import se.fulkopinglibrary.fulkopinglibrary.models.User;
 import se.fulkopinglibrary.fulkopinglibrary.services.UserService;
 import se.fulkopinglibrary.fulkopinglibrary.services.BookService;
+import se.fulkopinglibrary.fulkopinglibrary.services.MagazineService;
+import se.fulkopinglibrary.fulkopinglibrary.services.MediaService;
 import se.fulkopinglibrary.fulkopinglibrary.utils.SearchUtils;
+import se.fulkopinglibrary.fulkopinglibrary.utils.SearchMagazine;
 import se.fulkopinglibrary.fulkopinglibrary.models.Book;
 import se.fulkopinglibrary.fulkopinglibrary.models.LibraryItem;
 import se.fulkopinglibrary.fulkopinglibrary.models.Magazine;
 import se.fulkopinglibrary.fulkopinglibrary.models.MediaItem;
 
+import java.util.ArrayList;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -46,7 +50,8 @@ public class LibraryApp {
                 System.out.println("1. Login");
                 System.out.println("2. Signup");
                 System.out.println("3. Search");
-                System.out.println("4. Exit");
+                System.out.println("4. Explore");
+                System.out.println("5. Exit");
                 System.out.print("Choose an option: ");
                 int choice = scanner.nextInt();
                 scanner.nextLine(); // Consume newline
@@ -90,6 +95,10 @@ public class LibraryApp {
                         searchMenu(scanner);
                         break;
                     case 4:
+                        logger.info("Opening explore menu...");
+                        exploreMenu(scanner);
+                        break;
+                    case 5:
                         running = false;
                         logger.info("Exiting the system. Goodbye!");
                         DatabaseConnection.closePool();
@@ -97,12 +106,41 @@ public class LibraryApp {
                     default:
                         logger.warning("Invalid option selected");
                         System.out.println("Invalid option. Try again.");
-                }
-            }
+    }
+}
         } catch (Exception e) {
             logger.severe("An unexpected error occurred: " + e.getMessage());
         } finally {
             DatabaseConnection.closePool();
+        }
+    }
+
+
+    private static void displayItems(String category, List<LibraryItem> items) {
+        if (items.isEmpty()) {
+            System.out.println("\nNo " + category.toLowerCase() + " found.");
+            return;
+        }
+        
+        System.out.println("\n" + category + ":");
+        for (LibraryItem item : items) {
+            System.out.println("ID: " + item.getId() + 
+                ", Title: " + item.getTitle() +
+                ", Available: " + (item.isAvailable() ? "Yes" : "No"));
+            
+            if (item instanceof Book) {
+                Book book = (Book) item;
+                System.out.println("  Author: " + book.getAuthor() + 
+                    ", ISBN: " + book.getIsbn());
+            } else if (item instanceof Magazine) {
+                Magazine magazine = (Magazine) item;
+                System.out.println("  Publisher: " + magazine.getPublisher() + 
+                    ", ISSN: " + magazine.getIssn());
+            } else if (item instanceof MediaItem) {
+                MediaItem media = (MediaItem) item;
+                System.out.println("  Director: " + media.getDirector() + 
+                    ", Catalog Number: " + media.getCatalogNumber());
+            }
         }
     }
 
@@ -302,83 +340,156 @@ public class LibraryApp {
             System.out.println("2. Search Magazines");
             System.out.println("3. Search Media");
             System.out.println("4. Back to Main Menu");
-            System.out.print("Choose an option: ");
-            int choice = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
+            System.out.print("Choose an option (1-4): ");
+            
+            int choice = -1;
+            while (choice < 1 || choice > 4) {
+                try {
+                    choice = Integer.parseInt(scanner.nextLine());
+                    if (choice < 1 || choice > 4) {
+                        System.out.println("Invalid choice. Please enter a number between 1 and 4.");
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid input. Please enter a number between 1 and 4.");
+                }
+            }
             
             try (Connection connection = DatabaseConnection.getConnection()) {
                 long startTime = System.currentTimeMillis();
-                try {
-                    // Search operations
-                    switch (choice) {
-                        case 1:
-                            logger.info("Searching books...");
-                            SearchUtils.searchBooks(connection, scanner);
-                            break;
-                        case 2:
-                            logger.info("Searching magazines...");
-                            System.out.print("Enter search term: ");
-                            String magazineSearchTerm = scanner.nextLine();
-                            System.out.print("Search by (title/publisher/issn): ");
-                            String magazineField = scanner.nextLine();
-                            
-                            List<Magazine> magazines = BookService.searchMagazines(connection, magazineField, magazineSearchTerm);
-                            if (magazines.isEmpty()) {
-                                System.out.println("No magazines found matching your search.");
-                            } else {
-                                System.out.println("\nFound Magazines:");
-                                for (Magazine magazine : magazines) {
-                                    System.out.println("ID: " + magazine.getId() + 
-                                        ", Title: " + magazine.getTitle() +
-                                        ", Publisher: " + magazine.getPublisher() +
-                                        ", ISSN: " + magazine.getIssn() +
-                                        ", Available: " + (magazine.isAvailable() ? "Yes" : "No"));
-                                }
-                            }
-                            break;
-                        case 3:
-                            logger.info("Searching media...");
-                            System.out.print("Enter search term: ");
-                            String mediaSearchTerm = scanner.nextLine();
-                            System.out.print("Search by (title/director/catalog): ");
-                            String mediaField = scanner.nextLine();
-                            
-                            List<LibraryItem> mediaItems = BookService.searchLibraryItems(connection, mediaField, mediaSearchTerm)
-                                .stream()
-                                .filter(item -> item instanceof MediaItem)
-                                .toList();
-                                
-                            if (mediaItems.isEmpty()) {
-                                System.out.println("No media items found matching your search.");
-                            } else {
-                                System.out.println("\nFound Media Items:");
-                                for (LibraryItem item : mediaItems) {
-                                    MediaItem media = (MediaItem) item;
-                                    System.out.println("ID: " + media.getId() + 
-                                        ", Title: " + media.getTitle() +
-                                        ", Director: " + media.getDirector() +
-                                        ", Catalog Number: " + media.getCatalogNumber() +
-                                        ", Available: " + (media.isAvailable() ? "Yes" : "No"));
-                                }
-                            }
-                            break;
-                        case 4:
-                            searching = false;
-                            logger.info("Returning to main menu");
-                            break;
-                        default:
-                            logger.warning("Invalid option selected in search menu");
-                            System.out.println("Invalid option. Try again.");
-                    }
-                } catch (Exception e) {
-                    logger.severe("Error during search operation: " + e.getMessage());
-                    System.out.println("An error occurred during search. Please try again.");
+                
+                switch (choice) {
+                    case 1:
+                        logger.info("Searching books...");
+                        System.out.println("\nSearch Books By:");
+                        System.out.println("1. Title");
+                        System.out.println("2. Author");
+                        System.out.println("3. ISBN");
+                        System.out.println("4. General Search");
+                        System.out.print("Choose search type: ");
+                        int searchType = scanner.nextInt();
+                        scanner.nextLine(); // Consume newline
+                        System.out.print("Enter search term: ");
+                        String bookSearchTerm = scanner.nextLine();
+                        
+                        String field = "";
+                        switch (searchType) {
+                            case 1:
+                                field = "title";
+                                break;
+                            case 2:
+                                field = "author";
+                                break;
+                            case 3:
+                                field = "isbn";
+                                break;
+                            case 4:
+                                field = "general";
+                                break;
+                            default:
+                                System.out.println("Invalid search type");
+                                continue;
+                        }
+                        
+                        List<LibraryItem> books = BookService.searchLibraryItems(connection, field, bookSearchTerm);
+                        displayItems("Books", books);
+                        break;
+                    case 2:
+                        logger.info("Searching magazines...");
+                        System.out.print("Enter search term: ");
+                        String magazineSearchTerm = scanner.nextLine();
+                        try {
+                            List<Magazine> magazines = MagazineService.searchMagazines(connection, "title", magazineSearchTerm);
+                            displayItems("Magazines", new ArrayList<>(magazines));
+                        } catch (SQLException e) {
+                            logger.severe("Magazine search failed: " + e.getMessage());
+                            System.out.println("An error occurred while searching magazines. Please try again.");
+                        }
+                        break;
+                    case 3:
+                        logger.info("Searching media...");
+                        System.out.print("Enter search term: ");
+                        String mediaSearchTerm = scanner.nextLine();
+                        try {
+                            List<LibraryItem> media = MediaService.searchMedia(connection, "title", mediaSearchTerm);
+                            displayItems("Media", media);
+                        } catch (SQLException e) {
+                            logger.severe("Media search failed: " + e.getMessage());
+                            System.out.println("An error occurred while searching media. Please try again.");
+                        }
+                        break;
+                    case 4:
+                        searching = false;
+                        logger.info("Returning to main menu");
+                        break;
+                    default:
+                        logger.warning("Invalid option selected in search menu");
+                        System.out.println("Invalid option. Try again.");
                 }
                 
                 logger.info(String.format("Search operation completed in %d ms", 
                     System.currentTimeMillis() - startTime));
             } catch (SQLException e) {
                 logger.severe("Database connection error in search menu: " + e.getMessage());
+                System.out.println("A database error occurred. Please try again.");
+            }
+        }
+    }
+
+    private static void exploreMenu(Scanner scanner) {
+        boolean exploring = true;
+        
+        while (exploring) {
+            System.out.println("\n=== Explore Library ===");
+            System.out.println("1. Browse Books");
+            System.out.println("2. Browse Magazines");
+            System.out.println("3. Browse Media");
+            System.out.println("4. Back to Main Menu");
+            System.out.print("Choose an option (1-4): ");
+            
+            int choice = -1;
+            while (choice < 1 || choice > 4) {
+                try {
+                    choice = Integer.parseInt(scanner.nextLine());
+                    if (choice < 1 || choice > 4) {
+                        System.out.println("Invalid choice. Please enter a number between 1 and 4.");
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid input. Please enter a number between 1 and 4.");
+                }
+            }
+            
+            try (Connection connection = DatabaseConnection.getConnection()) {
+                long startTime = System.currentTimeMillis();
+                
+                switch (choice) {
+                    case 1:
+                        logger.info("Browsing books...");
+                        List<LibraryItem> books = BookService.getAllItems(connection);
+                        displayItems("Books", books);
+                        break;
+                    case 2:
+                        logger.info("Browsing magazines...");
+                        List<Magazine> magazines = MagazineService.getAllItems(connection);
+                        displayItems("Magazines", new ArrayList<>(magazines));
+                        break;
+                    case 3:
+                        logger.info("Browsing media...");
+                        List<MediaItem> media = MediaService.getAllItems(connection);
+                        displayItems("Media", new ArrayList<>(media));
+                        break;
+                    case 4:
+                        exploring = false;
+                        logger.info("Returning to main menu");
+                        break;
+                    default:
+                        logger.warning("Invalid option selected in explore menu");
+                        System.out.println("Invalid option. Try again.");
+                }
+                
+                logger.info(String.format("Explore operation completed in %d ms", 
+                    System.currentTimeMillis() - startTime));
+            } catch (SQLException e) {
+                logger.severe("Database connection error in explore menu: " + e.getMessage());
                 System.out.println("A database error occurred. Please try again.");
             }
         }

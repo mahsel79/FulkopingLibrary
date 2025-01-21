@@ -12,10 +12,13 @@ C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrar
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\MediaTypeImpl.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\User.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\services\BookService.java
+C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\services\MagazineService.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\services\MediaService.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\services\SearchBook.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\services\UserService.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\utils\LoggerUtil.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\utils\Login.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\utils\PasswordUtils.java
+C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\utils\SearchMagazine.java
+C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\utils\SearchMedia.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\utils\SearchUtils.java

@@ -1,6 +1,7 @@
 package se.fulkopinglibrary.fulkopinglibrary.services;
 
 import se.fulkopinglibrary.fulkopinglibrary.models.Book;
+import java.sql.SQLException;
 
 import java.sql.Connection;
 import java.util.ArrayList;
@@ -8,13 +9,49 @@ import java.util.List;
 import java.util.Scanner;
 
 public class SearchBook {
+    public static List<Book> getAllMagazines(Connection connection) throws SQLException {
+        return BookService.searchBooks(connection, "", "magazine");
+    }
+
     public static void searchBooks(Connection connection, Scanner scanner) {
         System.out.print("Enter search term: ");
         String searchTerm = scanner.nextLine();
-        System.out.print("Search by (title/author/isbn/general): ");
-        String searchType = scanner.nextLine();
+        System.out.println("Search by:");
+        System.out.println("1. Title");
+        System.out.println("2. Author"); 
+        System.out.println("3. ISBN");
+        System.out.println("4. General");
+        System.out.print("Choose an option (1-4): ");
+        
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+        
+        String searchType;
+        switch (choice) {
+            case 1:
+                searchType = "title";
+                break;
+            case 2:
+                searchType = "author";
+                break;
+            case 3:
+                searchType = "isbn";
+                break;
+            case 4:
+                searchType = "general";
+                break;
+            default:
+                System.out.println("Invalid choice, using general search");
+                searchType = "general";
+        }
 
-        List<Book> books = BookService.searchBooks(connection, searchTerm, searchType);
+        List<Book> books;
+        try {
+            books = BookService.searchBooks(connection, searchTerm, searchType);
+        } catch (SQLException e) {
+            System.out.println("Error searching books: " + e.getMessage());
+            return;
+        }
         if (books.isEmpty()) {
             System.out.println("\nNo items found.");
             return;

@@ -10,33 +10,71 @@ import java.util.logging.Logger;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class BookService {
 
     // Search for books
-    public static List<Book> searchBooks(Connection connection, String searchTerm, String searchType) {
+    public static List<Book> searchBooks(Connection connection, String searchTerm, String searchType) throws SQLException {
+        // Validate searchType parameter
+        if (searchType == null || !Set.of("title", "author", "isbn", "general").contains(searchType)) {
+            throw new IllegalArgumentException("Invalid search type. Must be one of: title, author, isbn, general");
+        }
+
         List<Book> books = new ArrayList<>();
-        String query = """
-            SELECT item_id, title, author, isbn, is_available 
-            FROM library_items 
-            WHERE type = ? AND title LIKE ?""";
+        String query;
+        
+        switch (searchType) {
+            case "title":
+                query = "SELECT item_id, title, author, isbn, is_available FROM library_items WHERE type = ? AND title LIKE ?";
+                break;
+            case "author":
+                query = "SELECT item_id, title, author, isbn, is_available FROM library_items WHERE type = ? AND author LIKE ?";
+                break;
+            case "isbn":
+                query = "SELECT item_id, title, author, isbn, is_available FROM library_items WHERE type = ? AND isbn = ?";
+                break;
+            case "general":
+                query = """
+                    SELECT item_id, title, author, isbn, is_available 
+                    FROM library_items 
+                    WHERE type = ? AND (title LIKE ? OR author LIKE ? OR isbn LIKE ?)""";
+                break;
+            default:
+                // This case should never be reached due to the validation above
+                throw new IllegalStateException("Unexpected search type: " + searchType);
+        }
 
         try (PreparedStatement statement = connection.prepareStatement(query)) {
-            statement.setString(1, "%" + searchTerm + "%");
-            ResultSet resultSet = statement.executeQuery();
-
-            while (resultSet.next()) {
-                Book book = new Book(
-                        resultSet.getInt("item_id"),
-                        resultSet.getString("title"),
-                        resultSet.getString("author"),
-                        resultSet.getString("isbn"),
-                        resultSet.getBoolean("is_available")
-                );
-                books.add(book);
+            // Set parameters based on search type
+            statement.setString(1, "BOOK");
+            
+            if (searchType.equals("general")) {
+                String likeTerm = "%" + searchTerm + "%";
+                statement.setString(2, likeTerm);
+                statement.setString(3, likeTerm);
+                statement.setString(4, likeTerm);
+            } else {
+                // For title, author, and isbn searches
+                if (searchType.equals("isbn")) {
+                    statement.setString(2, searchTerm);
+                } else {
+                    statement.setString(2, "%" + searchTerm + "%");
+                }
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+            
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    Book book = new Book(
+                            resultSet.getInt("item_id"),
+                            resultSet.getString("title"),
+                            resultSet.getString("author"),
+                            resultSet.getString("isbn"),
+                            resultSet.getBoolean("is_available")
+                    );
+                    books.add(book);
+                }
+            }
         }
         return books;
     }
@@ -90,57 +128,95 @@ public class BookService {
     }
 
     // Search for library items
-    public static List<LibraryItem> searchLibraryItems(Connection connection, String field, String searchTerm) {
+    public static List<LibraryItem> searchLibraryItems(Connection connection, String field, String searchTerm) throws SQLException {
+        // Validate search type parameter
+        if (field == null || !Set.of("title", "author", "isbn", "general").contains(field)) {
+            throw new IllegalArgumentException("Invalid search type. Must be one of: title, author, isbn, general");
+        }
+
         List<LibraryItem> items = new ArrayList<>();
-        String query = "SELECT * FROM library_items WHERE " + field + " LIKE ?";
+        String query;
+        
+        switch (field) {
+            case "title":
+                query = "SELECT * FROM library_items WHERE title LIKE ?";
+                break;
+            case "author":
+                query = "SELECT * FROM library_items WHERE author LIKE ?";
+                break;
+            case "isbn":
+                query = "SELECT * FROM library_items WHERE isbn = ?";
+                break;
+            case "general":
+                query = """
+                    SELECT * FROM library_items 
+                    WHERE title LIKE ? OR author LIKE ? OR isbn LIKE ?""";
+                break;
+            default:
+                // This case should never be reached due to the validation above
+                throw new IllegalStateException("Unexpected search type: " + field);
+        }
 
         try (PreparedStatement statement = connection.prepareStatement(query)) {
-            statement.setString(1, "%" + searchTerm + "%");
-            ResultSet resultSet = statement.executeQuery();
-
-            while (resultSet.next()) {
-                String type = resultSet.getString("type");
-                LibraryItem item = null;
-                
-                switch (type) {
-                    case "BOOK":
-                        item = new Book(
-                            resultSet.getInt("item_id"),
-                            resultSet.getString("title"),
-                            resultSet.getString("author"),
-                            resultSet.getString("isbn"),
-                            resultSet.getBoolean("is_available")
-                        );
-                        break;
-                    case "MAGAZINE":
-                        item = new Magazine(
-                            resultSet.getInt("item_id"),
-                            resultSet.getString("title"),
-                            resultSet.getString("publisher"),
-                            resultSet.getString("issn"),
-                            resultSet.getBoolean("is_available")
-                        );
-                        break;
-                    case "MEDIA":
-                        item = new MediaItem(
-                            resultSet.getInt("item_id"),
-                            resultSet.getString("title"),
-                            resultSet.getBoolean("is_available"),
-                            resultSet.getString("director"),
-                            resultSet.getString("catalog_number"),
-                            getMediaType(connection, resultSet.getInt("media_type_id"))
-                        );
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Unknown media type: " + type);
-                }
-                
-                if (item != null) {
-                    items.add(item);
+            switch (field) {
+                case "title":
+                case "author":
+                    statement.setString(1, "%" + searchTerm + "%");
+                    break;
+                case "isbn":
+                    statement.setString(1, searchTerm);
+                    break;
+                case "general":
+                    String likeTerm = "%" + searchTerm + "%";
+                    statement.setString(1, likeTerm);
+                    statement.setString(2, likeTerm);
+                    statement.setString(3, likeTerm);
+                    break;
+            }
+            
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    String type = resultSet.getString("type");
+                    LibraryItem item = null;
+                    
+                    switch (type) {
+                        case "BOOK":
+                            item = new Book(
+                                resultSet.getInt("item_id"),
+                                resultSet.getString("title"),
+                                resultSet.getString("author"),
+                                resultSet.getString("isbn"),
+                                resultSet.getBoolean("is_available")
+                            );
+                            break;
+                        case "MAGAZINE":
+                            item = new Magazine(
+                                resultSet.getInt("item_id"),
+                                resultSet.getString("title"),
+                                resultSet.getString("publisher"),
+                                resultSet.getString("issn"),
+                                resultSet.getBoolean("is_available")
+                            );
+                            break;
+                        case "MEDIA":
+                            item = new MediaItem(
+                                resultSet.getInt("item_id"),
+                                resultSet.getString("title"),
+                                resultSet.getBoolean("is_available"),
+                                resultSet.getString("director"),
+                                resultSet.getString("catalog_number"),
+                                getMediaType(connection, resultSet.getInt("media_type_id"))
+                            );
+                            break;
+                        default:
+                            throw new IllegalArgumentException("Unknown media type: " + type);
+                    }
+                    
+                    if (item != null) {
+                        items.add(item);
+                    }
                 }
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
         return items;
     }
@@ -369,5 +445,25 @@ public class BookService {
             e.printStackTrace();
         }
         return loans;
+    }
+
+    public static List<LibraryItem> getAllItems(Connection connection) throws SQLException {
+        List<LibraryItem> items = new ArrayList<>();
+        String query = "SELECT item_id, title, author, isbn, is_available FROM library_items WHERE type = 'BOOK'";
+        
+        try (PreparedStatement statement = connection.prepareStatement(query);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                Book book = new Book(
+                    resultSet.getInt("item_id"),
+                    resultSet.getString("title"),
+                    resultSet.getString("author"),
+                    resultSet.getString("isbn"),
+                    resultSet.getBoolean("is_available")
+                );
+                items.add(book);
+            }
+        }
+        return items;
     }
 }
