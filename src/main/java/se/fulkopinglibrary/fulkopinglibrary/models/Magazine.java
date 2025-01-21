@@ -3,12 +3,13 @@ package se.fulkopinglibrary.fulkopinglibrary.models;
 /**
  * Represents a magazine in the library system
  */
-public class Magazine extends LibraryItem implements MediaType {
+public class Magazine extends LibraryItem {
     private final String publisher;
     private final String issn;
 
     public Magazine(int id, String title, String publisher, String issn, boolean isAvailable) {
         super(id, title, isAvailable);
+        this.type = ItemType.MAGAZINE;
         if (publisher == null || publisher.isBlank()) {
             throw new IllegalArgumentException("Publisher cannot be null or blank");
         }
@@ -28,8 +29,8 @@ public class Magazine extends LibraryItem implements MediaType {
     }
 
     @Override
-    public String getType() {
-        return MediaType.TYPE_MAGAZINE;
+    public ItemType getType() {
+        return type;
     }
 
     @Override

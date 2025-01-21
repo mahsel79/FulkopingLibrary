@@ -2,13 +2,17 @@ C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrar
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\LibraryApp.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\Book.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\BookItem.java
+C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\ItemType.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\LibraryItem.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\Magazine.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\MagazineItem.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\Media.java
+C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\MediaItem.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\MediaType.java
+C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\MediaTypeImpl.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\models\User.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\services\BookService.java
+C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\services\MediaService.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\services\SearchBook.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\services\UserService.java
 C:\Users\Desp\Documents\GitHub\FulkopingLibrary\src\main\java\se\fulkopinglibrary\fulkopinglibrary\utils\LoggerUtil.java
