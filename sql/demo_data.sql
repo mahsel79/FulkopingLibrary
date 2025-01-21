@@ -1,7 +1,7 @@
 USE fulkoping_library;
 
 -- Insert media types and get their IDs
-INSERT INTO media_types (type_name, loan_period_days) VALUES
+INSERT IGNORE INTO media_types (type_name, loan_period_days) VALUES
     ('CD', 10),
     ('DVD', 10),
     ('Blu-ray', 10),
