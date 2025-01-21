@@ -91,7 +91,15 @@ The Fulköping Library System is a Java-based console application designed to ma
 ### **Item Management**
 - **Unified Handling**: Books, magazines, and media are managed through a single `library_items` table.
 - **Availability Tracking**: The `is_available` flag indicates whether an item can be borrowed.
-- **Reservation System**: Users can reserve items that are currently on loan, with automatic expiration after 30 days.
+- **Loan Durations**:
+  - Books: 30 days
+  - Magazines: 10 days
+  - Media: 10 days
+- **Reservation System**:
+  - Users can reserve items that are currently on loan
+  - Reservations automatically expire after 30 days if not picked up
+  - Reserved items are held for the reserving user when returned
+  - Email notifications are sent 3 days before reservation expiration
 
 ### **User Management**
 - **Secure Authentication**: Passwords are hashed using salted hashes for enhanced security.

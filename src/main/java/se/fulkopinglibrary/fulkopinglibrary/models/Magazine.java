@@ -29,7 +29,7 @@ public class Magazine extends LibraryItem implements MediaType {
 
     @Override
     public String getType() {
-        return Media.TYPE_MAGAZINE;
+        return MediaType.TYPE_MAGAZINE;
     }
 
     @Override
@@ -41,5 +41,10 @@ public class Magazine extends LibraryItem implements MediaType {
                 ", issn='" + issn + '\'' +
                 ", isAvailable=" + isAvailable() +
                 '}';
+    }
+
+    @Override
+    public int getLoanDurationDays() {
+        return 10;
     }
 }

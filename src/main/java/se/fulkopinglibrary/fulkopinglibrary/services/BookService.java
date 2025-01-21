@@ -3,6 +3,10 @@ package se.fulkopinglibrary.fulkopinglibrary.services;
 import se.fulkopinglibrary.fulkopinglibrary.models.Book;
 import se.fulkopinglibrary.fulkopinglibrary.models.Magazine;
 import se.fulkopinglibrary.fulkopinglibrary.models.LibraryItem;
+import se.fulkopinglibrary.fulkopinglibrary.models.MediaItem;
+import se.fulkopinglibrary.fulkopinglibrary.models.MediaTypeImpl;
+import se.fulkopinglibrary.fulkopinglibrary.utils.LoggerUtil;
+import java.util.logging.Logger;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +19,7 @@ public class BookService {
         String query = """
             SELECT item_id, title, author, isbn, is_available 
             FROM library_items 
-            WHERE type = 'BOOK' AND title LIKE ?""";
+            WHERE type = ? AND title LIKE ?""";
 
         try (PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setString(1, "%" + searchTerm + "%");
@@ -65,6 +69,26 @@ public class BookService {
         return magazines;
     }
 
+    private static final Logger logger = LoggerUtil.getLogger(BookService.class);
+
+    // Helper method to get MediaTypeImpl from database
+    private static MediaTypeImpl getMediaType(Connection connection, int mediaTypeId) {
+        String query = "SELECT type_name, loan_period_days FROM media_types WHERE media_type_id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setInt(1, mediaTypeId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return new MediaTypeImpl(
+                    rs.getString("type_name"),
+                    rs.getInt("loan_period_days")
+                );
+            }
+        } catch (SQLException e) {
+            logger.severe("Error getting media type: " + e.getMessage());
+        }
+        return null;
+    }
+
     // Search for library items
     public static List<LibraryItem> searchLibraryItems(Connection connection, String field, String searchTerm) {
         List<LibraryItem> items = new ArrayList<>();
@@ -95,6 +119,16 @@ public class BookService {
                             resultSet.getString("publisher"),
                             resultSet.getString("issn"),
                             resultSet.getBoolean("is_available")
+                        );
+                        break;
+                    case "MEDIA":
+                        item = new MediaItem(
+                            resultSet.getInt("item_id"),
+                            resultSet.getString("title"),
+                            resultSet.getBoolean("is_available"),
+                            resultSet.getString("director"),
+                            resultSet.getString("catalog_number"),
+                            getMediaType(connection, resultSet.getInt("media_type_id"))
                         );
                         break;
                     default:
@@ -215,13 +249,14 @@ public class BookService {
         }
     }
 
-    public static List<Book> viewLoanHistory(Connection connection, int userId) {
-        List<Book> loans = new ArrayList<>();
+    public static List<LibraryItem> viewLoanHistory(Connection connection, int userId) {
+        List<LibraryItem> loans = new ArrayList<>();
         String query = """
-            SELECT li.* FROM library_items li
+            SELECT li.*, l.loan_date, l.return_date, mt.loan_period_days 
+            FROM library_items li
             JOIN loans l ON li.item_id = l.item_id
+            LEFT JOIN media_types mt ON li.media_type_id = mt.media_type_id
             WHERE l.user_id = ? AND l.return_date IS NOT NULL
-            AND li.type = 'BOOK'
             ORDER BY l.loan_date DESC""";
         
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
@@ -229,13 +264,45 @@ public class BookService {
             ResultSet rs = stmt.executeQuery();
             
             while (rs.next()) {
-                loans.add(new Book(
-                    rs.getInt("item_id"),
-                    rs.getString("title"),
-                    rs.getString("author"),
-                    rs.getString("isbn"),
-                    rs.getBoolean("is_available")
-                ));
+                String type = rs.getString("type");
+                LibraryItem item = null;
+                
+                switch (type) {
+                    case "BOOK":
+                        item = new Book(
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getString("author"),
+                            rs.getString("isbn"),
+                            rs.getBoolean("is_available")
+                        );
+                        break;
+                    case "MAGAZINE":
+                        item = new Magazine(
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getString("publisher"),
+                            rs.getString("issn"),
+                            rs.getBoolean("is_available")
+                        );
+                        break;
+                    case "MEDIA":
+                        item = new MediaItem(
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getBoolean("is_available"),
+                            rs.getString("director"),
+                            rs.getString("catalog_number"),
+                            getMediaType(connection, rs.getInt("media_type_id"))
+                        );
+                        break;
+                }
+                
+                if (item != null) {
+                    item.setLoanDate(rs.getDate("loan_date").toLocalDate());
+                    item.setReturnDate(rs.getDate("return_date").toLocalDate());
+                    loans.add(item);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -243,13 +310,14 @@ public class BookService {
         return loans;
     }
 
-    public static List<Book> viewCurrentLoans(Connection connection, int userId) {
-        List<Book> loans = new ArrayList<>();
+    public static List<LibraryItem> viewCurrentLoans(Connection connection, int userId) {
+        List<LibraryItem> loans = new ArrayList<>();
         String query = """
-            SELECT li.* FROM library_items li
+            SELECT li.*, l.loan_date, mt.loan_period_days 
+            FROM library_items li
             JOIN loans l ON li.item_id = l.item_id
+            LEFT JOIN media_types mt ON li.media_type_id = mt.media_type_id
             WHERE l.user_id = ? AND l.return_date IS NULL
-            AND li.type = 'BOOK'
             ORDER BY l.loan_date DESC""";
         
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
@@ -257,13 +325,45 @@ public class BookService {
             ResultSet rs = stmt.executeQuery();
             
             while (rs.next()) {
-                loans.add(new Book(
-                    rs.getInt("item_id"),
-                    rs.getString("title"),
-                    rs.getString("author"),
-                    rs.getString("isbn"),
-                    rs.getBoolean("is_available")
-                ));
+                String type = rs.getString("type");
+                LibraryItem item = null;
+                
+                switch (type) {
+                    case "BOOK":
+                        item = new Book(
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getString("author"),
+                            rs.getString("isbn"),
+                            rs.getBoolean("is_available")
+                        );
+                        break;
+                    case "MAGAZINE":
+                        item = new Magazine(
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getString("publisher"),
+                            rs.getString("issn"),
+                            rs.getBoolean("is_available")
+                        );
+                        break;
+                    case "MEDIA":
+                        item = new MediaItem(
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getBoolean("is_available"),
+                            rs.getString("director"),
+                            rs.getString("catalog_number"),
+                            getMediaType(connection, rs.getInt("media_type_id"))
+                        );
+                        break;
+                }
+                
+                if (item != null) {
+                    item.setLoanDate(rs.getDate("loan_date").toLocalDate());
+                    item.setLoanPeriodDays(rs.getInt("loan_period_days"));
+                    loans.add(item);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();

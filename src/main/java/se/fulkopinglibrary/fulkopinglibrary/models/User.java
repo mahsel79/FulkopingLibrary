@@ -1,8 +1,6 @@
 package se.fulkopinglibrary.fulkopinglibrary.models;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;

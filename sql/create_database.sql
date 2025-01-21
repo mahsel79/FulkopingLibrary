@@ -31,10 +31,17 @@ CREATE TABLE user_roles (
     FOREIGN KEY (role_id) REFERENCES roles(role_id)
 );
 
+CREATE TABLE media_types (
+    media_type_id INT AUTO_INCREMENT PRIMARY KEY,
+    type_name VARCHAR(50) UNIQUE NOT NULL,
+    loan_period_days INT NOT NULL
+);
+
 CREATE TABLE library_items (
     item_id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     type ENUM('BOOK', 'MAGAZINE', 'MEDIA') NOT NULL,
+    media_type_id INT,
     is_available BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -50,8 +57,23 @@ CREATE TABLE library_items (
     issn VARCHAR(9) UNIQUE,
     CONSTRAINT valid_issn CHECK (issn IS NULL OR issn REGEXP '^[0-9]{4}-[0-9]{3}[0-9X]$'),
 
+    -- Media specific fields
+    director VARCHAR(255),
+    catalog_number VARCHAR(50) UNIQUE,
+
+    FOREIGN KEY (media_type_id) REFERENCES media_types(media_type_id),
     FULLTEXT INDEX idx_fulltext_title (title)
 );
+
+-- Insert default media types
+INSERT INTO media_types (type_name, loan_period_days) VALUES
+    ('CD', 10),
+    ('DVD', 10),
+    ('Blu-ray', 10),
+    ('Vinyl', 10),
+    ('Audiobook', 30),
+    ('Book', 30),
+    ('Magazine', 10);
 
 CREATE TABLE loans (
     loan_id INT AUTO_INCREMENT PRIMARY KEY,

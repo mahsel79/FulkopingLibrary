@@ -30,8 +30,13 @@ public class Book extends LibraryItem implements BookItem {
     }
 
     @Override
-    public String getType() {
-        return "BOOK";
+    public ItemType getType() {
+        return ItemType.BOOK;
+    }
+
+    @Override
+    public int getLoanDurationDays() {
+        return mediaType != null ? mediaType.getLoanDurationDays() : 30;
     }
 
     @Override

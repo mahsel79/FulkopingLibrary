@@ -5,14 +5,15 @@ The Fulköping Library System is a **Java console application** designed to help
 ---
 
 ## **Technologies Used**
-- **Programming Language**: Java
+- **Programming Language**: Java 17
 - **Database**: MySQL
 - **Database Management**: Docker (for running MySQL)
-- **Build Tool**: Maven (optional)
+- **Build Tool**: Maven
 - **IDE**: IntelliJ IDEA (recommended)
 - **Libraries**:
    - MySQL Connector/J (for database connectivity)
    - Java Standard Library (for console input/output and hashing)
+   - SLF4J (for logging)
 
 ---
 
@@ -22,23 +23,39 @@ FulkopingLibrary/
 ├── src/
 │   ├── main/
 │   │   ├── java/
-│   │   │   ├── fulkoping/
-│   │   │   │   ├── DatabaseConnection.java
-│   │   │   │   ├── LibraryApp.java
-│   │   │   │   ├── models/
-│   │   │   │   │   ├── Book.java
-│   │   │   │   │   ├── Magazine.java
-│   │   │   │   │   ├── Media.java
-│   │   │   │   ├── services/
-│   │   │   │   │   ├── BookService.java
-│   │   │   │   ├── utils/
-│   │   │   │   │   ├── PasswordUtils.java
+│   │   │   ├── se/
+│   │   │   │   ├── fulkopinglibrary/
+│   │   │   │   │   ├── fulkopinglibrary/
+│   │   │   │   │   │   ├── DatabaseConnection.java
+│   │   │   │   │   │   ├── LibraryApp.java
+│   │   │   │   │   │   ├── models/
+│   │   │   │   │   │   │   ├── Book.java
+│   │   │   │   │   │   │   ├── Magazine.java
+│   │   │   │   │   │   │   ├── Media.java
+│   │   │   │   │   │   │   ├── MediaItem.java
+│   │   │   │   │   │   │   ├── MediaType.java
+│   │   │   │   │   │   │   ├── MediaTypeImpl.java
+│   │   │   │   │   │   │   ├── ItemType.java
+│   │   │   │   │   │   │   ├── LibraryItem.java
+│   │   │   │   │   │   │   ├── User.java
+│   │   │   │   │   │   ├── services/
+│   │   │   │   │   │   │   ├── BookService.java
+│   │   │   │   │   │   │   ├── MediaService.java
+│   │   │   │   │   │   │   ├── SearchBook.java
+│   │   │   │   │   │   ├── utils/
+│   │   │   │   │   │   │   ├── LoggerUtil.java
+│   │   │   │   │   │   │   ├── PasswordUtils.java
 ├── sql/
 │   ├── create_database.sql
 │   ├── demo_data.sql
-├── lib/
-│   ├── mysql-connector-java-8.0.30.jar
+├── pom.xml
+├── mvnw
+├── mvnw.cmd
+├── .env
+├── .gitignore
+├── LICENSE
 ├── README.md
+├── REPORT.md
 ```
 
 ---
@@ -63,6 +80,20 @@ FulkopingLibrary/
 5. **Reserve Items**:
    - Users can reserve items that are currently on loan.
    - Reservations expire after 30 days if not picked up.
+   - Books may be borrowed for 30 days, magazines and other media for 10 days.
+
+---
+
+## **Logging Configuration**
+The application uses SLF4J for logging with the following configuration:
+
+- Logs are written to both console and file (`fulkoping-library.log`)
+- Log levels:
+  - INFO: General application flow
+  - DEBUG: Detailed debugging information
+  - ERROR: Critical errors and exceptions
+
+To change logging behavior, modify the LoggerUtil class configuration.
 
 ---
 
@@ -107,20 +138,20 @@ The system comes preloaded with sample data for testing purposes. Below are the 
 ### **Demo Loans**
 | **User** | **Item Borrowed**       | **Loan Date** | **Return Date** |
 |----------|-------------------------|---------------|-----------------|
-| Alice    | 1984                    | 2023-10-01    | Not returned    |
-| Bob      | To Kill a Mockingbird   | 2023-10-05    | Not returned    |
+| Alice    | 1984                    | 2025-10-01    | Not returned    |
+| Bob      | To Kill a Mockingbird   | 2025-10-05    | Not returned    |
 
 ### **Demo Reservations**
 | **User** | **Item Reserved**       | **Reservation Date** | **Expiry Date** |
 |----------|-------------------------|----------------------|-----------------|
-| Alice    | The Great Gatsby        | 2023-10-10           | 2023-11-09      |
+| Alice    | The Great Gatsby        | 2025-10-10           | 2025-11-09      |
 
 ---
 
 ## **Setup and Running Instructions**
 
 ### **1. Prerequisites**
-- **Java Development Kit (JDK)**: Install JDK 11 or later.
+- **Java Development Kit (JDK)**: Install JDK 17
 - **Docker**: Install Docker from [https://www.docker.com/](https://www.docker.com/).
 - **IntelliJ IDEA**: Install IntelliJ IDEA from [https://www.jetbrains.com/idea/](https://www.jetbrains.com/idea/).
 - **MySQL Connector/J**: Download the `.jar` file from [https://dev.mysql.com/downloads/connector/j/](https://dev.mysql.com/downloads/connector/j/).
@@ -206,6 +237,9 @@ The system comes preloaded with sample data for testing purposes. Below are the 
    - Ensure the `library_items` table is created before inserting data.
 - **Password Hashing Issues**:
    - Verify the `PasswordUtils.java` class is correctly implemented.
+- **Logging Issues**:
+   - Check log file permissions and disk space
+   - Verify LoggerUtil configuration
 
 ---
 

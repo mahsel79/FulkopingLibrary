@@ -26,7 +26,7 @@ public class SearchBook {
         List<Book> mediaList = new ArrayList<>();
 
         for (Book book : books) {
-            switch (book.getType().toLowerCase()) {
+            switch (book.getType().toString()) {
                 case "book":
                     booksList.add(book);
                     break;
