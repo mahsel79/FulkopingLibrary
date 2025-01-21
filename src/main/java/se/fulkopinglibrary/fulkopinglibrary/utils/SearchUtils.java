@@ -10,6 +10,7 @@ import se.fulkopinglibrary.fulkopinglibrary.models.LibraryItem;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
@@ -100,19 +101,11 @@ public class SearchUtils {
     // Perform book search
     private static void performBookSearch(Connection connection, String searchTerm, String searchType) {
         try {
-            List<Book> books = BookService.searchBooks(connection, searchTerm, searchType);
+            List<Book> books = BookService.searchBooks(connection, searchTerm, searchType, 0, 1, 20);
             displayResults(books, "book");
         } catch (Exception e) {
             System.out.println("\nAn error occurred during search: " + e.getMessage());
             System.out.println("Please try again.");
-        } finally {
-            try {
-                if (connection != null && !connection.isClosed()) {
-                    connection.close();
-                }
-            } catch (SQLException e) {
-                System.out.println("Error closing connection: " + e.getMessage());
-            }
         }
     }
 
@@ -146,22 +139,18 @@ public class SearchUtils {
     // Perform media search
     private static void performMediaSearch(Connection connection, String searchTerm, String searchType) {
         try {
-            List<MediaItem> allMedia = MediaService.getAllItems(connection);
-            List<MediaItem> filteredMedia = allMedia.stream()
+            List<MediaItem> filteredMedia = MediaService.getAllItems(connection).stream()
                 .filter(media -> {
-                    if (media instanceof MediaItem mediaItem) {
-                        switch (searchType) {
-                            case "title":
-                                return mediaItem.getTitle().toLowerCase().contains(searchTerm.toLowerCase());
-                            case "director":
-                                return mediaItem.getDirector().toLowerCase().contains(searchTerm.toLowerCase());
-                            case "catalog_number":
-                                return mediaItem.getCatalogNumber().toLowerCase().contains(searchTerm.toLowerCase());
-                            default:
-                                return true;
-                        }
+                    switch (searchType) {
+                        case "title":
+                            return media.getTitle().toLowerCase().contains(searchTerm.toLowerCase());
+                        case "director":
+                            return media.getDirector().toLowerCase().contains(searchTerm.toLowerCase());
+                        case "catalog_number":
+                            return media.getCatalogNumber().toLowerCase().contains(searchTerm.toLowerCase());
+                        default:
+                            return true;
                     }
-                    return false;
                 })
                 .toList();
             displayResults(filteredMedia, "media");
@@ -223,7 +212,7 @@ public class SearchUtils {
         }
     }
 
-    // Explore all items
+    // Explore all items with pagination and sorting
     public static void exploreMenu(Connection connection, Scanner scanner) {
         while (true) {
             System.out.println("\n=== Explore Menu ===");
@@ -236,24 +225,60 @@ public class SearchUtils {
             int choice = getValidChoice(scanner, 1, 4);
             if (choice == 4) return;
 
-            try {
-                switch (choice) {
-                    case 1 -> {
-                        List<Book> books = BookService.searchBooks(connection, "", "general");
-                        displayResults(books, "book");
+            // Get sorting preference
+            System.out.println("\n=== Sort Options ===");
+            System.out.println("1. By Title (A-Z)");
+            System.out.println("2. By Title (Z-A)");
+            System.out.println("3. By Availability");
+            System.out.println("4. No Sorting");
+            System.out.print("Choose sort option (1-4): ");
+            int sortChoice = getValidChoice(scanner, 1, 4);
+
+            // Get page size
+            System.out.print("\nEnter number of items per page (10-100): ");
+            int pageSize = getValidChoice(scanner, 10, 100);
+
+            int currentPage = 1;
+            boolean hasMore = true;
+            
+            while (hasMore) {
+                try {
+                    List<? extends LibraryItem> items = switch (choice) {
+                        case 1 -> {
+                            yield BookService.searchBooks(connection, "", "general", sortChoice, currentPage, pageSize);
+                        }
+                        case 2 -> MediaService.getAllItems(connection, sortChoice, currentPage, pageSize);
+                        case 3 -> MagazineService.getAllItems(connection, sortChoice, currentPage, pageSize);
+                        default -> Collections.emptyList();
+                    };
+
+                    if (items.isEmpty()) {
+                        System.out.println("\nNo more items found.");
+                        break;
                     }
-                    case 2 -> {
-                        List<MediaItem> media = MediaService.getAllItems(connection);
-                        displayResults(media, "media");
+
+                    displayResults(items, choice == 1 ? "book" : choice == 2 ? "media" : "magazine");
+
+                    // Pagination controls
+                    System.out.println("\n=== Page " + currentPage + " ===");
+                    System.out.println("1. Next Page");
+                    System.out.println("2. Previous Page");
+                    System.out.println("3. New Search");
+                    System.out.println("4. Back to Explore Menu");
+                    System.out.print("Choose option (1-4): ");
+                    
+                    int pageChoice = getValidChoice(scanner, 1, 4);
+                    switch (pageChoice) {
+                        case 1 -> currentPage++;
+                        case 2 -> currentPage = Math.max(1, currentPage - 1);
+                        case 3 -> { hasMore = false; currentPage = 1; }
+                        case 4 -> { return; }
                     }
-                    case 3 -> {
-                        List<Magazine> magazines = MagazineService.getAllItems(connection);
-                        displayResults(magazines, "magazine");
-                    }
+                } catch (Exception e) {
+                    System.out.println("\nAn error occurred: " + e.getMessage());
+                    System.out.println("Please try again.");
+                    break;
                 }
-            } catch (Exception e) {
-                System.out.println("\nAn error occurred: " + e.getMessage());
-                System.out.println("Please try again.");
             }
         }
     }

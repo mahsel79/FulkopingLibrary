@@ -15,7 +15,7 @@ import java.util.Set;
 public class BookService {
 
     // Search for books
-    public static List<Book> searchBooks(Connection connection, String searchTerm, String searchType) throws SQLException {
+    public static List<Book> searchBooks(Connection connection, String searchTerm, String searchType, int sortOption, int page, int pageSize) throws SQLException {
         // Validate searchType parameter
         if (searchType == null || !Set.of("title", "author", "isbn", "general").contains(searchType)) {
             throw new IllegalArgumentException("Invalid search type. Must be one of: title, author, isbn, general");
@@ -24,21 +24,46 @@ public class BookService {
         List<Book> books = new ArrayList<>();
         String query;
         
+        // Base query with sorting
+        String orderBy = switch (sortOption) {
+            case 1 -> "title ASC";
+            case 2 -> "title DESC";
+            case 3 -> "is_available DESC";
+            default -> "item_id ASC";
+        };
+        
         switch (searchType) {
             case "title":
-                query = "SELECT item_id, title, author, isbn, is_available FROM library_items WHERE type = ? AND title LIKE ?";
+                query = """
+                    SELECT item_id, title, author, isbn, is_available 
+                    FROM library_items 
+                    WHERE type = ? AND title LIKE ?
+                    ORDER BY %s
+                    LIMIT ? OFFSET ?""".formatted(orderBy);
                 break;
             case "author":
-                query = "SELECT item_id, title, author, isbn, is_available FROM library_items WHERE type = ? AND author LIKE ?";
+                query = """
+                    SELECT item_id, title, author, isbn, is_available 
+                    FROM library_items 
+                    WHERE type = ? AND author LIKE ?
+                    ORDER BY %s
+                    LIMIT ? OFFSET ?""".formatted(orderBy);
                 break;
             case "isbn":
-                query = "SELECT item_id, title, author, isbn, is_available FROM library_items WHERE type = ? AND isbn = ?";
+                query = """
+                    SELECT item_id, title, author, isbn, is_available 
+                    FROM library_items 
+                    WHERE type = ? AND isbn = ?
+                    ORDER BY %s
+                    LIMIT ? OFFSET ?""".formatted(orderBy);
                 break;
             case "general":
                 query = """
                     SELECT item_id, title, author, isbn, is_available 
                     FROM library_items 
-                    WHERE type = ? AND (title LIKE ? OR author LIKE ? OR isbn LIKE ?)""";
+                    WHERE type = ? AND (title LIKE ? OR author LIKE ? OR isbn LIKE ?)
+                    ORDER BY %s
+                    LIMIT ? OFFSET ?""".formatted(orderBy);
                 break;
             default:
                 // This case should never be reached due to the validation above

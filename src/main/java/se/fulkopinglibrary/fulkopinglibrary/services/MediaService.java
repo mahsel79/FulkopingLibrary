@@ -13,27 +13,46 @@ import java.util.List;
 public class MediaService {
 
     public static List<MediaItem> getAllItems(Connection connection) throws SQLException {
-        List<MediaItem> mediaItems = new ArrayList<>();
+        return getAllItems(connection, 0, 1, 20);
+    }
+
+    public static List<MediaItem> getAllItems(Connection connection, int sortOption, int page, int pageSize) throws SQLException {
+        List<MediaItem> items = new ArrayList<>();
+        
+        String orderBy = switch (sortOption) {
+            case 1 -> "title ASC";
+            case 2 -> "title DESC";
+            case 3 -> "is_available DESC";
+            default -> "item_id ASC";
+        };
+        
         String query = """
             SELECT item_id, title, is_available, director, catalog_number, media_type_id 
             FROM library_items 
-            WHERE type = 'MEDIA'""";
+            WHERE type = 'MEDIA'
+            ORDER BY %s
+            LIMIT ? OFFSET ?""".formatted(orderBy);
         
-        try (PreparedStatement statement = connection.prepareStatement(query);
-             ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                MediaItem mediaItem = new MediaItem(
-                    resultSet.getInt("item_id"),
-                    resultSet.getString("title"),
-                    resultSet.getBoolean("is_available"),
-                    resultSet.getString("director"),
-                    resultSet.getString("catalog_number"),
-                    getMediaType(connection, resultSet.getInt("media_type_id"))
-                );
-                mediaItems.add(mediaItem);
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            int offset = (page - 1) * pageSize;
+            statement.setInt(1, pageSize);
+            statement.setInt(2, offset);
+            
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    MediaItem media = new MediaItem(
+                        resultSet.getInt("item_id"),
+                        resultSet.getString("title"),
+                        resultSet.getBoolean("is_available"),
+                        resultSet.getString("director"),
+                        resultSet.getString("catalog_number"),
+                        getMediaType(connection, resultSet.getInt("media_type_id"))
+                    );
+                    items.add(media);
+                }
             }
         }
-        return mediaItems;
+        return items;
     }
 
     private static MediaTypeImpl getMediaType(Connection connection, int mediaTypeId) throws SQLException {

@@ -136,6 +136,3 @@ The Fulköping Library System is a Java-based console application designed to ma
 - Create a **mobile-friendly web interface** for remote access.
 
 ---
-
-## **Conclusion**
-The Fulköping Library System provides a robust and scalable solution for managing library operations. The recent schema changes, including the consolidation of media tables and improved search functionality, have enhanced the system's efficiency and usability. Future improvements, such as enhanced search capabilities and a graphical interface, will further elevate the user experience and system performance.

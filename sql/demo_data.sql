@@ -17,8 +17,8 @@ SET @cd_type_id = (SELECT media_type_id FROM media_types WHERE type_name = 'CD')
 
 -- Insert sample users with hashed passwords and salts
 INSERT INTO users (username, password_hash, salt, name, email) VALUES
-    ('alice', 'hashed_password_1', 'salt_1', 'Alice Johnson', 'alice@example.com'),
-    ('bob', 'hashed_password_2', 'salt_2', 'Bob Smith', 'bob@example.com');
+    ('alice', 'eJgdIJt0Vcr++PuAu2EQJnycpxisQ0tp3tjXhqp12Ew=', 'D7nMu06E6f6GO786+027Vw==', 'Alice Johnson', 'alice@example.com'),
+    ('bob', 't+7WJGIpjUEMxMpGqoZjDNKpAYpUXnXbdnNqx4Y0agE=', 'sjn/a5lOoEN8Nmrkml93uQ==', 'Bob Smith', 'bob@example.com');
 
 -- Insert sample books with media_type_id
 INSERT INTO library_items (title, author, type, isbn, is_available, media_type_id) VALUES
@@ -36,19 +36,19 @@ INSERT INTO library_items (title, author, type, isbn, is_available, publisher, i
     ('Vogue', 'Condé Nast', 'MAGAZINE', NULL, TRUE, 'Condé Nast', '0042-8000', @magazine_type_id),
     ('Wired', 'Condé Nast', 'MAGAZINE', NULL, TRUE, 'Condé Nast', '1059-1028', @magazine_type_id);
 
--- Insert sample media with media_type_id
-INSERT INTO library_items (title, author, type, isbn, is_available, media_type_id) VALUES
-    ('The Dark Knight', 'Christopher Nolan', 'MEDIA', NULL, TRUE, @cd_type_id),
-    ('Inception', 'Christopher Nolan', 'MEDIA', NULL, TRUE, @cd_type_id),
-    ('The Lord of the Rings: The Fellowship of the Ring', 'Peter Jackson', 'MEDIA', NULL, TRUE, @cd_type_id),
-    ('The Matrix', 'The Wachowskis', 'MEDIA', NULL, TRUE, @cd_type_id),
-    ('Interstellar', 'Christopher Nolan', 'MEDIA', NULL, TRUE, @cd_type_id);
+-- Insert sample media with media_type_id and directors
+INSERT INTO library_items (title, author, type, isbn, is_available, media_type_id, director) VALUES
+    ('The Dark Knight', 'Christopher Nolan', 'MEDIA', NULL, TRUE, @cd_type_id, 'Christopher Nolan'),
+    ('Inception', 'Christopher Nolan', 'MEDIA', NULL, TRUE, @cd_type_id, 'Christopher Nolan'),
+    ('The Lord of the Rings: The Fellowship of the Ring', 'Peter Jackson', 'MEDIA', NULL, TRUE, @cd_type_id, 'Peter Jackson'),
+    ('The Matrix', 'The Wachowskis', 'MEDIA', NULL, TRUE, @cd_type_id, 'Lana Wachowski, Lilly Wachowski'),
+    ('Interstellar', 'Christopher Nolan', 'MEDIA', NULL, TRUE, @cd_type_id, 'Christopher Nolan');
 
 -- Insert sample loans
 INSERT INTO loans (user_id, item_id, loan_date, return_date) VALUES
-    (1, 1, '2023-10-01', NULL),
-    (2, 2, '2023-10-05', NULL);
+    (1, 1, '2025-02-01', NULL),
+    (2, 2, '2025-02-05', NULL);
 
 -- Insert sample reservations
 INSERT INTO reservations (user_id, item_id, reservation_date, expiry_date) VALUES
-    (1, 3, '2023-10-10', '2023-11-09');
+    (1, 3, '2025-02-10', '2025-03-09');

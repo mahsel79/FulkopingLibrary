@@ -2,6 +2,7 @@ package se.fulkopinglibrary.fulkopinglibrary.services;
 
 import se.fulkopinglibrary.fulkopinglibrary.models.User;
 import java.util.Set;
+import java.util.HashSet;
 import se.fulkopinglibrary.fulkopinglibrary.utils.PasswordUtils;
 
 import java.sql.Connection;
@@ -140,6 +141,22 @@ public class UserService {
         return false;
     }
 
+    public static boolean updatePassword(Connection connection, int userId, String newPasswordHash, String newSalt) {
+        String query = "UPDATE users SET password_hash = ?, salt = ?, updated_at = NOW() WHERE user_id = ?";
+        
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setString(1, newPasswordHash);
+            statement.setString(2, newSalt);
+            statement.setInt(3, userId);
+            
+            int rowsUpdated = statement.executeUpdate();
+            return rowsUpdated > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error updating password", e);
+            return false;
+        }
+    }
+
     private static boolean usernameExists(Connection connection, String username) {
         String query = "SELECT 1 FROM users WHERE username = ?";
         try (PreparedStatement statement = connection.prepareStatement(query)) {
@@ -217,45 +234,70 @@ public class UserService {
         
         try (PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setString(1, username);
-            ResultSet rs = statement.executeQuery();
             
-            if (rs.next()) {
-                // Check if account is locked
-                Timestamp lockoutUntil = rs.getTimestamp("lockout_until");
-                if (lockoutUntil != null && lockoutUntil.after(new Timestamp(System.currentTimeMillis()))) {
-                    logger.log(Level.WARNING, "Account locked for user: " + username);
-                    return null;
-                }
+                    try (ResultSet rs = statement.executeQuery()) {
+                        if (!rs.next()) {
+                            logger.log(Level.WARNING, "User not found: " + username);
+                            return null;
+                        }
 
-                String storedHash = rs.getString("password_hash");
-                String salt = rs.getString("salt");
-                
-                if (PasswordUtils.verifyPassword(password, storedHash, salt)) {
-                    // Reset failed attempts on successful login
-                    resetFailedAttempts(connection, rs.getInt("user_id"));
-                    return new User(
-                        rs.getInt("user_id"),
-                        rs.getString("username"),
-                        rs.getString("password_hash"),
-                        rs.getString("salt"),
-                        rs.getString("name"),
-                        rs.getString("email"),
-                        rs.getInt("failed_attempts"),
-                        rs.getTimestamp("lockout_until") != null ? 
-                            rs.getTimestamp("lockout_until").toLocalDateTime() : null,
-                        rs.getTimestamp("created_at").toLocalDateTime(),
-                        rs.getTimestamp("updated_at").toLocalDateTime(),
-                        rs.getBoolean("is_deleted"),
-                        Set.of(rs.getString("roles").split(","))
-                    );
-                } else {
-                    // Increment failed attempts
-                    int attempts = incrementFailedAttempts(connection, rs.getInt("user_id"));
-                    if (attempts >= MAX_LOGIN_ATTEMPTS) {
-                        lockAccount(connection, rs.getInt("user_id"));
-                        logger.log(Level.WARNING, "Account locked due to too many failed attempts: " + username);
-                    }
-                }
+                        // Check if account is locked
+                        Timestamp lockoutUntil = rs.getTimestamp("lockout_until");
+                        if (lockoutUntil != null && lockoutUntil.after(new Timestamp(System.currentTimeMillis()))) {
+                            logger.log(Level.WARNING, "Account locked for user: " + username);
+                            return null;
+                        }
+
+                        String storedHash = rs.getString("password_hash");
+                        String salt = rs.getString("salt");
+                        
+                        // Verify password using current hashing method
+                        boolean passwordValid = PasswordUtils.verifyPassword(password, storedHash, salt);
+                        
+                        if (!passwordValid) {
+                            // Increment failed attempts only if user exists but password is wrong
+                            int attempts = incrementFailedAttempts(connection, rs.getInt("user_id"));
+                            if (attempts >= MAX_LOGIN_ATTEMPTS) {
+                                lockAccount(connection, rs.getInt("user_id"));
+                                logger.log(Level.WARNING, "Account locked due to too many failed attempts: " + username);
+                            }
+                            return null;
+                        }
+
+                        // Reset failed attempts on successful login
+                        resetFailedAttempts(connection, rs.getInt("user_id"));
+                        
+                        // Get roles from join table
+                        Set<String> roles = new HashSet<>();
+                        String rolesQuery = """
+                            SELECT r.role_name 
+                            FROM user_roles ur
+                            JOIN roles r ON ur.role_id = r.role_id
+                            WHERE ur.user_id = ?
+                            """;
+                        try (PreparedStatement rolesStatement = connection.prepareStatement(rolesQuery);
+                             ResultSet rolesRs = rolesStatement.executeQuery()) {
+                            rolesStatement.setInt(1, rs.getInt("user_id"));
+                            while (rolesRs.next()) {
+                                roles.add(rolesRs.getString("role_name"));
+                            }
+                        }
+                    
+                        return new User(
+                            rs.getInt("user_id"),
+                            rs.getString("username"),
+                            rs.getString("password_hash"),
+                            rs.getString("salt"),
+                            rs.getString("name"),
+                            rs.getString("email"),
+                            rs.getInt("failed_attempts"),
+                            rs.getTimestamp("lockout_until") != null ? 
+                                rs.getTimestamp("lockout_until").toLocalDateTime() : null,
+                            rs.getTimestamp("created_at").toLocalDateTime(),
+                            rs.getTimestamp("updated_at").toLocalDateTime(),
+                            rs.getBoolean("is_deleted"),
+                            roles
+                        );
             }
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Database error during login", e);
@@ -272,34 +314,46 @@ public class UserService {
     }
 
     private static int incrementFailedAttempts(Connection connection, int userId) throws SQLException {
-        String query = "UPDATE users SET failed_attempts = failed_attempts + 1 WHERE user_id = ?";
-        try (PreparedStatement statement = connection.prepareStatement(query)) {
-            statement.setInt(1, userId);
-            statement.executeUpdate();
-        }
+        String updateQuery = "UPDATE users SET failed_attempts = failed_attempts + 1 WHERE user_id = ?";
+        String selectQuery = "SELECT failed_attempts FROM users WHERE user_id = ?";
         
-        // Get current failed attempts count
-        query = "SELECT failed_attempts FROM users WHERE user_id = ?";
-        try (PreparedStatement statement = connection.prepareStatement(query)) {
-            statement.setInt(1, userId);
-            ResultSet rs = statement.executeQuery();
-            if (rs.next()) {
-                return rs.getInt("failed_attempts");
+        try (PreparedStatement updateStatement = connection.prepareStatement(updateQuery);
+             PreparedStatement selectStatement = connection.prepareStatement(selectQuery)) {
+            
+            updateStatement.setInt(1, userId);
+            updateStatement.executeUpdate();
+            
+            selectStatement.setInt(1, userId);
+            try (ResultSet rs = selectStatement.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("failed_attempts");
+                }
             }
         }
         return 0;
     }
 
     private static void lockAccount(Connection connection, int userId) throws SQLException {
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.MINUTE, LOCKOUT_MINUTES);
-        Timestamp lockoutUntil = new Timestamp(cal.getTimeInMillis());
-        
-        String query = "UPDATE users SET lockout_until = ? WHERE user_id = ?";
-        try (PreparedStatement statement = connection.prepareStatement(query)) {
-            statement.setTimestamp(1, lockoutUntil);
-            statement.setInt(2, userId);
-            statement.executeUpdate();
+        try {
+            connection.setAutoCommit(false);
+            
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.MINUTE, LOCKOUT_MINUTES);
+            Timestamp lockoutUntil = new Timestamp(cal.getTimeInMillis());
+            
+            String query = "UPDATE users SET lockout_until = ? WHERE user_id = ?";
+            try (PreparedStatement statement = connection.prepareStatement(query)) {
+                statement.setTimestamp(1, lockoutUntil);
+                statement.setInt(2, userId);
+                statement.executeUpdate();
+            }
+            
+            connection.commit();
+        } catch (SQLException e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            connection.setAutoCommit(true);
         }
     }
 }

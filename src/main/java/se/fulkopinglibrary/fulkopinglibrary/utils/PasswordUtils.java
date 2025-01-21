@@ -1,5 +1,6 @@
 package se.fulkopinglibrary.fulkopinglibrary.utils;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -31,5 +32,32 @@ public class PasswordUtils {
     public static boolean verifyPassword(String password, String storedHash, String salt) {
         String hashedPassword = hashPassword(password, salt);
         return hashedPassword.equals(storedHash);
+    }
+    
+    public static String legacyHash(String password) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] hashBytes = md.digest(password.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hashBytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("MD5 algorithm not available", e);
+        }
+    }
+
+    public static void main(String[] args) {
+        // Generate hashes for test users
+        String aliceSalt = generateSalt();
+        String aliceHash = hashPassword("password1", aliceSalt);
+        
+        String bobSalt = generateSalt();
+        String bobHash = hashPassword("password2", bobSalt);
+        
+        System.out.println("Alice:");
+        System.out.println("Salt: " + aliceSalt);
+        System.out.println("Hash: " + aliceHash);
+        System.out.println();
+        System.out.println("Bob:");
+        System.out.println("Salt: " + bobSalt);
+        System.out.println("Hash: " + bobHash);
     }
 }
