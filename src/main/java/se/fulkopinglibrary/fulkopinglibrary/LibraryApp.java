@@ -510,11 +510,27 @@ public class LibraryApp {
                             System.out.print("Enter search term: ");
                             String mediaSearchTerm = scanner.nextLine();
                             try {
-                                List<LibraryItem> media = MediaService.searchMedia(
-                                    connection, 
-                                    mediaSearchField, 
-                                    mediaSearchTerm
-                                );
+                                List<LibraryItem> media = new ArrayList<>();
+                                switch (mediaSearchField) {
+                                    case "title":
+                                        media = MediaService.searchByTitle(connection, mediaSearchTerm);
+                                        break;
+                                    case "publisher":
+                                        media = MediaService.searchByDirector(connection, mediaSearchTerm);
+                                        break;
+                                    case "catalog_number":
+                                        media = MediaService.searchByCatalogNumber(connection, mediaSearchTerm);
+                                        break;
+                                    case "general":
+                                        // Combine results from all search types
+                                        List<LibraryItem> titleResults = MediaService.searchByTitle(connection, mediaSearchTerm);
+                                        List<LibraryItem> directorResults = MediaService.searchByDirector(connection, mediaSearchTerm);
+                                        List<LibraryItem> catalogResults = MediaService.searchByCatalogNumber(connection, mediaSearchTerm);
+                                        media.addAll(titleResults);
+                                        media.addAll(directorResults);
+                                        media.addAll(catalogResults);
+                                        break;
+                                }
                                 displayItems("Media", media);
                             } catch (SQLException e) {
                                 logger.severe("Media search failed: " + e.getMessage());

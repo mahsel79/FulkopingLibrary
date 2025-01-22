@@ -71,17 +71,17 @@ public class MediaService {
     }
 
     public static List<LibraryItem> searchByTitle(Connection connection, String title) throws SQLException {
-        String query = "SELECT * FROM media WHERE title LIKE ?";
+        String query = "SELECT * FROM library_items WHERE type = 'MEDIA' AND title LIKE ?";
         return searchMedia(connection, query, "%" + title + "%");
     }
 
     public static List<LibraryItem> searchByDirector(Connection connection, String director) throws SQLException {
-        String query = "SELECT * FROM media WHERE director LIKE ?";
+        String query = "SELECT * FROM library_items WHERE type = 'MEDIA' AND director LIKE ?";
         return searchMedia(connection, query, "%" + director + "%");
     }
 
     public static List<LibraryItem> searchByCatalogNumber(Connection connection, String catalogNumber) throws SQLException {
-        String query = "SELECT * FROM media WHERE catalog_number = ?";
+        String query = "SELECT * FROM library_items WHERE type = 'MEDIA' AND catalog_number = ?";
         return searchMedia(connection, query, catalogNumber);
     }
 
