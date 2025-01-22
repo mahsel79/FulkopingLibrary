@@ -453,7 +453,8 @@ public class LibraryApp {
                         if (!magazineSearchField.isEmpty()) {
                             System.out.print("Enter search term: ");
                             String magazineSearchTerm = scanner.nextLine();
-                            try {
+                            try (Statement stmt = connection.createStatement();
+                                 ResultSet rs = stmt.executeQuery("SELECT 1")) {
                                 List<Magazine> magazines = MagazineService.searchMagazines(
                                     connection, 
                                     magazineSearchField, 

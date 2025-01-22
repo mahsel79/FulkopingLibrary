@@ -78,7 +78,7 @@ public class DatabaseConnection {
             config.setMaxLifetime(1800000);
             config.setConnectionTimeout(30000);
 
-            config.setLeakDetectionThreshold(30000);
+            config.setLeakDetectionThreshold(60000);
             config.setConnectionTestQuery("SELECT 1");
             config.setValidationTimeout(5000);
             config.addDataSourceProperty("cachePrepStmts", "true");
