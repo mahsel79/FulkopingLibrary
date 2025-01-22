@@ -72,15 +72,15 @@ public class DatabaseConnection {
             config.setJdbcUrl(dbUrl);
             config.setUsername(dbUser);
             config.setPassword(dbPassword);
-            config.setMaximumPoolSize(10);
+            config.setMaximumPoolSize(20);
             config.setMinimumIdle(2);
-            config.setIdleTimeout(30000);
+            config.setIdleTimeout(60000);
             config.setMaxLifetime(1800000);
-            config.setConnectionTimeout(30000);
+            config.setConnectionTimeout(60000);
 
-            config.setLeakDetectionThreshold(60000);
+            config.setLeakDetectionThreshold(240000);
             config.setConnectionTestQuery("SELECT 1");
-            config.setValidationTimeout(5000);
+            config.setValidationTimeout(10000);
             config.addDataSourceProperty("cachePrepStmts", "true");
             config.addDataSourceProperty("prepStmtCacheSize", "250");
             config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
@@ -108,8 +108,8 @@ public class DatabaseConnection {
             logger.info("Closing database connection pool");
             
             // Add HikariCP configuration to handle abandoned connections
-            dataSource.getHikariConfigMXBean().setIdleTimeout(30000);
-            dataSource.getHikariConfigMXBean().setMaxLifetime(60000);
+            dataSource.getHikariConfigMXBean().setIdleTimeout(120000);
+            dataSource.getHikariConfigMXBean().setMaxLifetime(240000);
             dataSource.getHikariConfigMXBean().setLeakDetectionThreshold(5000);
             
             // Close the connection pool

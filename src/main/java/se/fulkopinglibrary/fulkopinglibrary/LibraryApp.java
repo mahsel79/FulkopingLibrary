@@ -6,8 +6,8 @@
  * all core library operations including user authentication, item search,
  * borrowing, returning, and reservation of library items.</p>
  *
- * @author Library Development Team
- * @version 1.0
+ * @author Mahmoud Selman
+ * @version 1.0.0
  */
 package se.fulkopinglibrary.fulkopinglibrary;
 
@@ -172,14 +172,15 @@ public class LibraryApp {
 
         while (loggedIn) {
             System.out.println("\n=== User Menu ===");
-            System.out.println("1. Search for Books");
-            System.out.println("2. Borrow a Book");
-            System.out.println("3. Return a Book");
-            System.out.println("4. Reserve a Book");
-            System.out.println("5. View Loan History");
-            System.out.println("6. View Current Loans");
-            System.out.println("7. Update Profile");
-            System.out.println("8. Logout");
+            System.out.println("1. Search");
+            System.out.println("2. Explore");
+            System.out.println("3. Borrow");
+            System.out.println("4. Return");
+            System.out.println("5. Reserve");
+            System.out.println("6. View Loan History");
+            System.out.println("7. View Current Loans");
+            System.out.println("8. Update Profile");
+            System.out.println("9. Logout");
             System.out.print("Choose an option: ");
             int choice = scanner.nextInt();
             scanner.nextLine(); // Consume newline
@@ -190,27 +191,30 @@ public class LibraryApp {
                 
                 switch (choice) {
                     case 1:
-                        SearchUtils.searchBooks(connection, scanner);
+                        searchMenu(scanner);
                         break;
                     case 2:
-                        borrowBook(connection, user.getUserId(), scanner);
+                        exploreMenu(scanner);
                         break;
                     case 3:
-                        returnBook(connection, user.getUserId(), scanner);
+                        borrowBook(connection, user.getUserId(), scanner);
                         break;
                     case 4:
-                        reserveBook(connection, user.getUserId(), scanner);
+                        returnBook(connection, user.getUserId(), scanner);
                         break;
                     case 5:
-                        viewLoanHistory(connection, user.getUserId());
+                        reserveBook(connection, user.getUserId(), scanner);
                         break;
                     case 6:
-                        viewCurrentLoans(connection, user.getUserId());
+                        viewLoanHistory(connection, user.getUserId());
                         break;
                     case 7:
-                        updateProfile(connection, user.getUserId(), scanner);
+                        viewCurrentLoans(connection, user.getUserId());
                         break;
                     case 8:
+                        updateProfile(connection, user.getUserId(), scanner);
+                        break;
+                    case 9:
                         loggedIn = false;
                         logger.info("User logged out successfully");
                         System.out.println("Logged out successfully.");
@@ -348,19 +352,10 @@ public class LibraryApp {
             System.out.println("2. Search Magazines");
             System.out.println("3. Search Media");
             System.out.println("4. Back to Main Menu");
-            System.out.print("Choose an option (1-4): ");
+            System.out.print("Choose an option: ");
             
-            int choice = -1;
-            while (choice < 1 || choice > 4) {
-                try {
-                    choice = Integer.parseInt(scanner.nextLine());
-                    if (choice < 1 || choice > 4) {
-                        System.out.println("Invalid choice. Please enter a number between 1 and 4.");
-                    }
-                } catch (NumberFormatException e) {
-                    System.out.println("Invalid input. Please enter a number between 1 and 4.");
-                }
-            }
+            int choice = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
             
             try (Connection connection = DatabaseConnection.getConnection()) {
                 long startTime = System.currentTimeMillis();
