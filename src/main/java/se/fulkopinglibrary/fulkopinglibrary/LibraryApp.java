@@ -437,9 +437,12 @@ public class LibraryApp {
                         break;
                    
                     case 5:
-                        viewLoanHistory(connection, user.getUserId());
+                        BookService.displayLoanHistory(connection, user.getUserId());
                         break;
-            case 7:
+                    case 6:
+                        viewCurrentLoans(connection, user.getUserId());
+                        break;
+                    case 7:
                 System.out.println("7. View Current Reservations");
                 viewReservations();
                 break;

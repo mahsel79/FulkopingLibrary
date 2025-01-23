@@ -363,6 +363,41 @@ public class BookService {
         }
     }
 
+    public static void displayLoanHistory(Connection connection, int userId) {
+        List<LibraryItem> loans = viewLoanHistory(connection, userId);
+        
+        if (loans.isEmpty()) {
+            System.out.println("No loan history found.");
+            return;
+        }
+
+        for (LibraryItem item : loans) {
+            System.out.println("================================");
+            System.out.printf("ID:            %d%n", item.getId());
+            System.out.printf("Title:         %s%n", item.getTitle());
+            
+            if (item instanceof Book) {
+                Book book = (Book) item;
+                System.out.printf("Author:        %s%n", book.getAuthor());
+                System.out.printf("ISBN:          %s%n", book.getIsbn());
+            } else if (item instanceof Magazine) {
+                Magazine magazine = (Magazine) item;
+                System.out.printf("Publisher:     %s%n", magazine.getPublisher());
+                System.out.printf("ISSN:          %s%n", magazine.getIssn());
+            } else if (item instanceof MediaItem) {
+                MediaItem media = (MediaItem) item;
+                System.out.printf("Director:      %s%n", media.getDirector());
+                System.out.printf("Catalog #:     %s%n", media.getCatalogNumber());
+            }
+            
+            System.out.printf("Available:     %s%n", item.isAvailable() ? "Yes" : "No");
+            System.out.printf("Loan Date:     %s%n", item.getLoanDate());
+            System.out.printf("Return Date:   %s%n", item.getReturnDate());
+            System.out.println("================================");
+            System.out.println();
+        }
+    }
+
     public static List<LibraryItem> viewLoanHistory(Connection connection, int userId) {
         List<LibraryItem> loans = new ArrayList<>();
         String query = """
