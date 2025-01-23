@@ -1,2 +1,3 @@
 # Database configuration
 src/main/resources/database.properties
+target/

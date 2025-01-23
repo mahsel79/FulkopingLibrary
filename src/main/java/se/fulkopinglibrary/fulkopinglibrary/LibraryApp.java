@@ -559,7 +559,25 @@ public class LibraryApp {
 
     private static void returnBook(Connection connection, int userId, Scanner scanner) {
         try {
-            System.out.print("Enter the ID of the loan to return: ");
+            // First show current loans
+            List<LibraryItem> loans = BookService.viewCurrentLoans(connection, userId);
+            if (loans.isEmpty()) {
+                System.out.println("No current loans found!");
+                return;
+            }
+            
+            System.out.println("\n--- Your Current Loans ---");
+            System.out.println("ID\tTitle\t\tType\t\tDue Date");
+            System.out.println("--------------------------------------------------");
+            for (LibraryItem loan : loans) {
+                System.out.printf("%d\t%s\t%s\t%s\n",
+                    loan.getId(),
+                    loan.getTitle(),
+                    loan.getType(),
+                    loan.getLoanDate().plusDays(loan.getLoanPeriodDays()));
+            }
+            
+            System.out.print("\nEnter the ID of the loan to return: ");
             int loanId = scanner.nextInt();
             scanner.nextLine(); // Consume newline
 

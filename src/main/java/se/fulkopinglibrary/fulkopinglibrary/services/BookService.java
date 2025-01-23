@@ -11,6 +11,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.Scanner;
 
 public class BookService {
 
@@ -423,10 +424,68 @@ public class BookService {
         return loans;
     }
 
+    public static void manageLoans(Connection connection, int userId, Scanner scanner) {
+        // Display current loans
+        List<LibraryItem> loans = viewCurrentLoans(connection, userId);
+        
+        if (loans.isEmpty()) {
+            System.out.println("\nNo Loans Found!");
+            return;
+        }
+
+        System.out.println("\n=== Your Current Loans ===");
+        System.out.println("ID\tTitle\t\t\tType\t\tDue Date");
+        System.out.println("--------------------------------------------------");
+        
+        for (LibraryItem item : loans) {
+            String dueDate = item.getLoanDate()
+                .plusDays(item.getLoanPeriodDays())
+                .toString();
+                
+            System.out.printf("%d\t%s\t%s\t%s%n",
+                item.getId(),
+                item.getTitle(),
+                item.getClass().getSimpleName(),
+                dueDate);
+        }
+
+        // Handle returns
+        System.out.println("\n=== Return Item ===");
+        System.out.print("Enter the ID of the loan to return (or 0 to cancel): ");
+        int itemId = scanner.nextInt();
+        scanner.nextLine(); // consume newline
+        
+        if (itemId > 0) {
+            // Find loan ID for the item
+            String loanQuery = """
+                SELECT loan_id FROM loans 
+                WHERE item_id = ? AND user_id = ? AND return_date IS NULL""";
+                
+            try (PreparedStatement stmt = connection.prepareStatement(loanQuery)) {
+                stmt.setInt(1, itemId);
+                stmt.setInt(2, userId);
+                ResultSet rs = stmt.executeQuery();
+                
+                if (rs.next()) {
+                    int loanId = rs.getInt("loan_id");
+                    if (returnBook(connection, loanId)) {
+                        System.out.println("Item returned successfully!");
+                    } else {
+                        System.out.println("Failed to return item.");
+                    }
+                } else {
+                    System.out.println("No active loan found for this item.");
+                }
+            } catch (SQLException e) {
+                System.out.println("Error processing return: " + e.getMessage());
+            }
+        }
+    }
+
     public static List<LibraryItem> viewCurrentLoans(Connection connection, int userId) {
         List<LibraryItem> loans = new ArrayList<>();
         String query = """
-            SELECT li.*, l.loan_date, mt.loan_period_days 
+            SELECT li.*, l.loan_date, l.loan_id, mt.loan_period_days 
             FROM library_items li
             JOIN loans l ON li.item_id = l.item_id
             LEFT JOIN media_types mt ON li.media_type_id = mt.media_type_id
