@@ -13,13 +13,13 @@ import se.fulkopinglibrary.fulkopinglibrary.utils.LoggerUtil;
 public class MagazineService {
     public static boolean borrowMagazine(Connection connection, int userId, int magazineId) {
         try {
-            String sql = "UPDATE magazine_items SET available = false WHERE id = ?";
+            String sql = "UPDATE library_items SET is_available = false WHERE item_id = ? AND type = 'MAGAZINE'";
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
                 pstmt.setInt(1, magazineId);
                 int affectedRows = pstmt.executeUpdate();
                 
                 if (affectedRows > 0) {
-                    sql = "INSERT INTO magazine_loans (user_id, item_id, loan_date) VALUES (?, ?, CURRENT_DATE)";
+                    sql = "INSERT INTO loans (user_id, item_id, loan_date) VALUES (?, ?, CURRENT_DATE)";
                     try (PreparedStatement loanStmt = connection.prepareStatement(sql)) {
                         loanStmt.setInt(1, userId);
                         loanStmt.setInt(2, magazineId);
@@ -76,6 +76,58 @@ public class MagazineService {
             }
         }
         return items;
+    }
+
+    public static boolean isItemAvailable(Connection connection, int magazineId) {
+        String query = "SELECT is_available FROM library_items WHERE item_id = ? AND type = 'MAGAZINE'";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, magazineId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getBoolean("is_available");
+                }
+            }
+        } catch (SQLException e) {
+            logger.severe("Error checking magazine availability: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public static boolean reserveMagazine(Connection connection, int userId, int magazineId) {
+        String checkReservationSql = """
+            SELECT reservation_id FROM reservations 
+            WHERE user_id = ? AND item_id = ? AND expiry_date > CURRENT_DATE
+            """;
+            
+        String insertReservationSql = """
+            INSERT INTO reservations 
+            (user_id, item_id, reservation_date, expiry_date) 
+            VALUES (?, ?, CURRENT_DATE, DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY))
+            """;
+            
+        try {
+            // Check if user already has an active reservation
+            try (PreparedStatement checkStmt = connection.prepareStatement(checkReservationSql)) {
+                checkStmt.setInt(1, userId);
+                checkStmt.setInt(2, magazineId);
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next()) {
+                        return false; // Reservation already exists
+                    }
+                }
+            }
+            
+            // Create new reservation
+            try (PreparedStatement insertStmt = connection.prepareStatement(insertReservationSql)) {
+                insertStmt.setInt(1, userId);
+                insertStmt.setInt(2, magazineId);
+                int rowsInserted = insertStmt.executeUpdate();
+                return rowsInserted > 0;
+            }
+        } catch (SQLException e) {
+            logger.severe("Error reserving magazine: " + e.getMessage());
+            return false;
+        }
     }
 
     public static List<Magazine> searchMagazines(Connection connection, String searchType, String searchTerm) throws SQLException {

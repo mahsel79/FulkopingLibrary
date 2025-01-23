@@ -295,6 +295,18 @@ public class BookService {
         }
     }
 
+    public static boolean isItemAvailable(Connection connection, int itemId) {
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "SELECT is_available FROM library_items WHERE item_id = ?")) {
+            stmt.setInt(1, itemId);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next() && rs.getBoolean("is_available");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public static boolean returnBook(Connection connection, int loanId) {
         String query = "UPDATE loans SET return_date = CURRENT_DATE WHERE loan_id = ?";
         String updateAvailability = """

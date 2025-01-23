@@ -65,6 +65,11 @@ public class MediaTypeImpl implements MediaType {
             throw new IllegalArgumentException("Media type cannot be null");
         }
         
+        // Handle generic MEDIA type
+        if (type.equalsIgnoreCase("MEDIA")) {
+            return new MediaTypeImpl("Media", 10);
+        }
+        
         switch (type.toUpperCase()) {
             case "DVD": return DVD;
             case "CD": return CD;

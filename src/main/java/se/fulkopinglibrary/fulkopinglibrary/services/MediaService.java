@@ -144,48 +144,68 @@ public class MediaService {
         return items;
     }
 
-    public static boolean borrowMedia(Connection connection, int userId, int mediaId) {
-        try {
-            // Check availability first
-            String checkSql = "SELECT available FROM media_items WHERE id = ?";
-            try (PreparedStatement checkStmt = connection.prepareStatement(checkSql)) {
-                checkStmt.setInt(1, mediaId);
-                ResultSet rs = checkStmt.executeQuery();
-                
-                if (rs.next() && rs.getBoolean("available")) {
-                    // Start transaction
-                    connection.setAutoCommit(false);
-                    
-                    try {
-                        // Mark item as unavailable
-                        String updateSql = "UPDATE media_items SET available = false WHERE id = ?";
-                        try (PreparedStatement updateStmt = connection.prepareStatement(updateSql)) {
-                            updateStmt.setInt(1, mediaId);
-                            updateStmt.executeUpdate();
-                        }
-
-                        // Create loan record
-                        String loanSql = "INSERT INTO media_loans (user_id, item_id, loan_date) VALUES (?, ?, CURRENT_DATE)";
-                        try (PreparedStatement loanStmt = connection.prepareStatement(loanSql)) {
-                            loanStmt.setInt(1, userId);
-                            loanStmt.setInt(2, mediaId);
-                            loanStmt.executeUpdate();
-                        }
-
-                        connection.commit();
-                        return true;
-                    } catch (SQLException e) {
-                        connection.rollback();
-                        LoggerUtil.getLogger(MediaService.class).severe("Transaction failed: " + e.getMessage());
-                        return false;
-                    } finally {
-                        connection.setAutoCommit(true);
-                    }
+    public static boolean isItemAvailable(Connection connection, int mediaId) {
+        String query = "SELECT is_available FROM library_items WHERE item_id = ? AND type = 'MEDIA'";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, mediaId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getBoolean("is_available");
                 }
             }
-            return false;
         } catch (SQLException e) {
-            LoggerUtil.getLogger(MediaService.class).severe("Error borrowing media: " + e.getMessage());
+            logger.severe("Error checking media availability: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public static boolean reserveMedia(Connection connection, int userId, int mediaId) {
+        String query = "INSERT INTO reservations (user_id, item_id, reservation_date) VALUES (?, ?, CURRENT_DATE)";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, userId);
+            statement.setInt(2, mediaId);
+            return statement.executeUpdate() > 0;
+        } catch (SQLException e) {
+            logger.severe("Error reserving media: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean borrowMedia(Connection connection, int userId, int mediaId) {
+        if (!isItemAvailable(connection, mediaId)) {
+            return false;
+        }
+
+        try {
+            connection.setAutoCommit(false);
+            
+            try {
+                // Mark item as unavailable
+                String updateSql = "UPDATE library_items SET is_available = false WHERE item_id = ? AND type = 'MEDIA'";
+                try (PreparedStatement updateStmt = connection.prepareStatement(updateSql)) {
+                    updateStmt.setInt(1, mediaId);
+                    updateStmt.executeUpdate();
+                }
+
+                // Create loan record
+                String loanSql = "INSERT INTO loans (user_id, item_id, loan_date) VALUES (?, ?, CURRENT_DATE)";
+                try (PreparedStatement loanStmt = connection.prepareStatement(loanSql)) {
+                    loanStmt.setInt(1, userId);
+                    loanStmt.setInt(2, mediaId);
+                    loanStmt.executeUpdate();
+                }
+
+                connection.commit();
+                return true;
+            } catch (SQLException e) {
+                connection.rollback();
+                logger.severe("Transaction failed: " + e.getMessage());
+                return false;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            logger.severe("Error borrowing media: " + e.getMessage());
             return false;
         }
     }

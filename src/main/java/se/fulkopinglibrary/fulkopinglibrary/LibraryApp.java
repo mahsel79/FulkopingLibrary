@@ -175,11 +175,10 @@ public class LibraryApp {
             System.out.println("2. Explore");
             System.out.println("3. Borrow");
             System.out.println("4. Return");
-            System.out.println("5. Reserve");
-            System.out.println("6. View Loan History");
-            System.out.println("7. View Current Loans");
-            System.out.println("8. Update Profile");
-            System.out.println("9. Logout");
+            System.out.println("5. View Loan History");
+            System.out.println("6. View Current Loans");
+            System.out.println("7. Update Profile");
+            System.out.println("8. Logout");
             System.out.print("Choose an option: ");
             int choice = scanner.nextInt();
             scanner.nextLine(); // Consume newline
@@ -199,9 +198,9 @@ public class LibraryApp {
                         boolean inBorrowMenu = true;
                         while (inBorrowMenu) {
                             System.out.println("\n=== Borrow Menu ===");
-                            System.out.println("1. Borrow a Book");
-                            System.out.println("2. Borrow a Magazine");
-                            System.out.println("3. Borrow Media Item");
+                            System.out.println("1. Borrow Book");
+                            System.out.println("2. Borrow Magazines"); 
+                            System.out.println("3. Borrow Media");
                             System.out.println("4. Back to User Menu");
                             System.out.print("Choose an option: ");
                             
@@ -210,17 +209,120 @@ public class LibraryApp {
                             
                             switch (borrowChoice) {
                                 case 1:
-                    borrowBook(connection, user.getUserId(), scanner);
-                    break;
-                case 2:
-                    System.out.print("Enter Magazine ID to borrow: ");
-                    int magazineId = scanner.nextInt();
-                    MagazineService.borrowMagazine(connection, user.getUserId(), magazineId);
-                    break;
-                case 3:
-                    System.out.print("Enter Media ID to borrow: ");
-                    int mediaId = scanner.nextInt();
-                    MediaService.borrowMedia(connection, user.getUserId(), mediaId);
+                                    List<LibraryItem> books = BookService.getAllItems(connection);
+                                    displayItems("Available Books", books);
+                                    System.out.print("Enter Book ID to borrow: ");
+                                    int bookId = scanner.nextInt();
+                                    scanner.nextLine();
+                                    BookService.borrowBook(connection, user.getUserId(), bookId);
+                                    break;
+                                case 2:
+                                    List<Magazine> magazines = MagazineService.getAllItems(connection);
+                                    displayItems("Available Magazines", magazines);
+                                    System.out.print("Enter Magazine ID to borrow: ");
+                                    int magazineId = scanner.nextInt();
+                                    scanner.nextLine();
+                                    
+                                    // Check availability first
+                                    boolean isAvailable = MagazineService.isItemAvailable(connection, magazineId);
+                                    
+                                    if (isAvailable) {
+                                        boolean success = MagazineService.borrowMagazine(connection, user.getUserId(), magazineId);
+                                        if (success) {
+                                            logger.info("Magazine borrowed successfully: user=" + user.getUserId() + ", magazine=" + magazineId);
+                                            System.out.println("Magazine borrowed successfully!");
+                                        } else {
+                                            logger.warning("Failed to borrow magazine: user=" + user.getUserId() + ", magazine=" + magazineId);
+                                            System.out.println("Failed to borrow the magazine. Please try again.");
+                                        }
+                                    } else {
+                                        System.out.println("This magazine is currently unavailable.");
+                                        System.out.println("Would you like to reserve it?");
+                                        System.out.println("1. Yes");
+                                        System.out.println("2. No");
+                                        System.out.print("Enter your choice (1-2): ");
+                                        int reserveChoice = -1;
+                                        while (reserveChoice < 1 || reserveChoice > 2) {
+                                            try {
+                                                reserveChoice = scanner.nextInt();
+                                                scanner.nextLine(); // Consume newline
+                                                if (reserveChoice < 1 || reserveChoice > 2) {
+                                                    System.out.println("Invalid choice. Please enter 1 or 2.");
+                                                }
+                                            } catch (Exception e) {
+                                                System.out.println("Invalid input. Please enter 1 or 2.");
+                                                scanner.nextLine(); // Clear invalid input
+                                            }
+                                        }
+                                        
+                                        if (reserveChoice == 1) {
+                                            boolean reserveSuccess = MagazineService.reserveMagazine(connection, user.getUserId(), magazineId);
+                                            if (reserveSuccess) {
+                                                logger.info("Magazine reserved successfully: user=" + user.getUserId() + ", magazine=" + magazineId);
+                                                System.out.println("Magazine reserved successfully! You'll be notified when it's available.");
+                                            } else {
+                                                logger.warning("Failed to reserve magazine: user=" + user.getUserId() + ", magazine=" + magazineId);
+                                                System.out.println("Failed to reserve the magazine. You may already have a reservation.");
+                                            }
+                                        } else {
+                                            logger.info("User declined reservation for magazine: " + magazineId);
+                                            System.out.println("Returning to main menu...");
+                                        }
+                                    }
+                                    break;
+                                case 3:
+                                    List<LibraryItem> media = MediaService.getAllItems(connection);
+                                    displayItems("Available Media", media);
+                                    System.out.print("Enter Media ID to borrow: ");
+                                    int mediaId = scanner.nextInt();
+                                    scanner.nextLine();
+                                    
+                                    // Check media availability first
+                                    boolean mediaAvailable = MediaService.isItemAvailable(connection, mediaId);
+                                    
+                                    if (mediaAvailable) {
+                                        boolean success = MediaService.borrowMedia(connection, user.getUserId(), mediaId);
+                                        if (success) {
+                                            logger.info("Media borrowed successfully: user=" + user.getUserId() + ", media=" + mediaId);
+                                            System.out.println("Media borrowed successfully!");
+                                        } else {
+                                            logger.warning("Failed to borrow media: user=" + user.getUserId() + ", media=" + mediaId);
+                                            System.out.println("Failed to borrow the media. Please try again.");
+                                        }
+                                    } else {
+                                        System.out.println("This media item is currently unavailable.");
+                                        System.out.println("Would you like to reserve it?");
+                                        System.out.println("1. Yes");
+                                        System.out.println("2. No");
+                                        System.out.print("Enter your choice (1-2): ");
+                                        int reserveChoice = -1;
+                                        while (reserveChoice < 1 || reserveChoice > 2) {
+                                            try {
+                                                reserveChoice = scanner.nextInt();
+                                                scanner.nextLine(); // Consume newline
+                                                if (reserveChoice < 1 || reserveChoice > 2) {
+                                                    System.out.println("Invalid choice. Please enter 1 or 2.");
+                                                }
+                                            } catch (Exception e) {
+                                                System.out.println("Invalid input. Please enter 1 or 2.");
+                                                scanner.nextLine(); // Clear invalid input
+                                            }
+                                        }
+                                        
+                                        if (reserveChoice == 1) {
+                                            boolean reserveSuccess = MediaService.reserveMedia(connection, user.getUserId(), mediaId);
+                                            if (reserveSuccess) {
+                                                logger.info("Media reserved successfully: user=" + user.getUserId() + ", media=" + mediaId);
+                                                System.out.println("Media reserved successfully! You'll be notified when it's available.");
+                                            } else {
+                                                logger.warning("Failed to reserve media: user=" + user.getUserId() + ", media=" + mediaId);
+                                                System.out.println("Failed to reserve the media. You may already have a reservation.");
+                                            }
+                                        } else {
+                                            logger.info("User declined reservation for media: " + mediaId);
+                                            System.out.println("Returning to main menu...");
+                                        }
+                                    }
                                     break;
                                 case 4:
                                     inBorrowMenu = false;
@@ -235,19 +337,17 @@ public class LibraryApp {
                     case 4:
                         returnBook(connection, user.getUserId(), scanner);
                         break;
+                   
                     case 5:
-                        reserveBook(connection, user.getUserId(), scanner);
-                        break;
-                    case 6:
                         viewLoanHistory(connection, user.getUserId());
                         break;
-                    case 7:
+                    case 6:
                         viewCurrentLoans(connection, user.getUserId());
                         break;
-                    case 8:
+                    case 7:
                         updateProfile(connection, user.getUserId(), scanner);
                         break;
-                    case 9:
+                    case 8:
                         loggedIn = false;
                         logger.info("User logged out successfully");
                         System.out.println("Logged out successfully.");
@@ -303,13 +403,51 @@ public class LibraryApp {
             }
             scanner.nextLine(); // Consume newline
 
-            boolean success = BookService.borrowBook(connection, userId, bookId);
-            if (success) {
-                logger.info("Book borrowed successfully: user=" + userId + ", book=" + bookId);
-                System.out.println("Book borrowed successfully!");
+            // Check availability first
+            boolean isAvailable = BookService.isItemAvailable(connection, bookId);
+            
+            if (isAvailable) {
+                boolean success = BookService.borrowBook(connection, userId, bookId);
+                if (success) {
+                    logger.info("Book borrowed successfully: user=" + userId + ", book=" + bookId);
+                    System.out.println("Book borrowed successfully!");
+                } else {
+                    logger.warning("Failed to borrow book: user=" + userId + ", book=" + bookId);
+                    System.out.println("Failed to borrow the book. Please try again.");
+                }
             } else {
-                logger.warning("Failed to borrow book: user=" + userId + ", book=" + bookId);
-                System.out.println("Failed to borrow the book. It may not be available.");
+                System.out.println("This book is currently unavailable.");
+                System.out.println("Would you like to reserve it?");
+                System.out.println("1. Yes");
+                System.out.println("2. No");
+                System.out.print("Enter your choice (1-2): ");
+                int reserveChoice = -1;
+                while (reserveChoice < 1 || reserveChoice > 2) {
+                    try {
+                        reserveChoice = scanner.nextInt();
+                        scanner.nextLine(); // Consume newline
+                        if (reserveChoice < 1 || reserveChoice > 2) {
+                            System.out.println("Invalid choice. Please enter 1 or 2.");
+                        }
+                    } catch (Exception e) {
+                        System.out.println("Invalid input. Please enter 1 or 2.");
+                        scanner.nextLine(); // Clear invalid input
+                    }
+                }
+                
+                if (reserveChoice == 1) {
+                    boolean reserveSuccess = BookService.reserveBook(connection, userId, bookId);
+                    if (reserveSuccess) {
+                        logger.info("Book reserved successfully: user=" + userId + ", book=" + bookId);
+                        System.out.println("Book reserved successfully! You'll be notified when it's available.");
+                    } else {
+                        logger.warning("Failed to reserve book: user=" + userId + ", book=" + bookId);
+                        System.out.println("Failed to reserve the book. You may already have a reservation.");
+                    }
+                } else {
+                    logger.info("User declined reservation for book: " + bookId);
+                    System.out.println("Returning to main menu...");
+                }
             }
         } finally {
             try {
