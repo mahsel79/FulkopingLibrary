@@ -278,11 +278,21 @@ Hash: tfaCmJiNhdasksbXCq5RkXIi3yTNYvNwg6/HLVxtWeE=
 ---
 ### **5. Run the Application**
 - IntelliJ IDEA
+
+- Option 1:
+   Run build script:  .\setup.ps1
+  
+- Option 2:  
 1. Open the `LibraryApp.java` file.
 2. Right-click and select **Run 'LibraryApp.main()'**.
 3. Use the console to interact with the application.
 
 - VSCode IDEA
+
+- Option 1:
+   Run build script:  .\setup.ps1
+
+- Option 2:   
 1. From root folder using Powershell excute:
    ./mvnw clean package && java -jar target/FulkopingLibrary-1.0-SNAPSHOT-jar-with-dependencies.jar
 ---

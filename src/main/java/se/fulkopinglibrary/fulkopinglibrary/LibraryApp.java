@@ -172,9 +172,20 @@ public class LibraryApp {
     private static void viewReservations() {
         try (Connection connection = DatabaseConnection.getConnection()) {
             String query = """
-                SELECT * FROM items 
-                WHERE reservation_date IS NOT NULL
-                ORDER BY reservation_date DESC
+                SELECT 
+                    r.reservation_id,
+                    r.reservation_date,
+                    r.expiry_date,
+                    li.item_id,
+                    li.title,
+                    li.type,
+                    u.user_id,
+                    u.name AS user_name
+                FROM reservations r
+                JOIN library_items li ON r.item_id = li.item_id
+                JOIN users u ON r.user_id = u.user_id
+                WHERE r.expiry_date > NOW()
+                ORDER BY r.reservation_date DESC
                 """;
                 
             try (PreparedStatement statement = connection.prepareStatement(query);
@@ -185,13 +196,17 @@ public class LibraryApp {
                 
                 while (rs.next()) {
                     hasReservations = true;
-                    LibraryItem item = mapResultSetToItem(rs);
-                    if (item != null) {
-                        System.out.printf("%s (ID: %d) - Reserved on: %s%n",
-                            item.getTitle(),
-                            item.getId(),
-                            item.getReservationDate());
-                    }
+                    System.out.printf("Reservation ID: %d\n", rs.getInt("reservation_id"));
+                    System.out.printf("Item: %s (ID: %d, Type: %s)\n", 
+                        rs.getString("title"),
+                        rs.getInt("item_id"),
+                        rs.getString("type"));
+                    System.out.printf("Reserved by: %s (User ID: %d)\n",
+                        rs.getString("user_name"),
+                        rs.getInt("user_id"));
+                    System.out.printf("Reservation Date: %s\n", rs.getDate("reservation_date"));
+                    System.out.printf("Expiry Date: %s\n", rs.getDate("expiry_date"));
+                    System.out.println("---------------------------");
                 }
                 
                 if (!hasReservations) {

@@ -22,22 +22,35 @@ public class UserService {
     public static boolean signup(Connection connection, Scanner scanner) {
         System.out.print("Enter username: ");
         String username = scanner.nextLine().trim();
-        System.out.print("Enter password: ");
-        String password = scanner.nextLine().trim();
+        
+        if (!User.isValidUsername(username)) {
+            logger.log(Level.WARNING, "Invalid username format");
+            return false;
+        }
+
+        // Password entry with validation loop
+        String password;
+        while (true) {
+            System.out.println("\nPassword Requirements:");
+            System.out.println(PasswordUtils.PASSWORD_REQUIREMENTS);
+            System.out.println("Example of strong password: SecurePass123!");
+            System.out.print("Enter password: ");
+            password = scanner.nextLine().trim();
+            
+            String validationResult = PasswordUtils.validatePasswordStrength(password);
+            if (validationResult == null) {
+                break;
+            }
+            System.out.println("\nPassword is not strong enough:");
+            System.out.println(validationResult);
+            System.out.println("Please try again with a stronger password.\n");
+        }
+
         System.out.print("Enter name: ");
         String name = scanner.nextLine().trim();
         System.out.print("Enter email: ");
         String email = scanner.nextLine().trim();
 
-        // Validate inputs
-        if (!User.isValidUsername(username)) {
-            logger.log(Level.WARNING, "Invalid username format");
-            return false;
-        }
-        if (!isPasswordStrong(password)) {
-            logger.log(Level.WARNING, "Password does not meet strength requirements");
-            return false;
-        }
         if (!User.isValidEmail(email)) {
             logger.log(Level.WARNING, "Invalid email format");
             return false;
@@ -53,25 +66,44 @@ public class UserService {
         String salt = PasswordUtils.generateSalt();
         String passwordHash = PasswordUtils.hashPassword(password, salt);
 
-        String query = """
+        String userQuery = """
             INSERT INTO users (
                 username, password_hash, salt, name, email,
-                failed_attempts, lockout_until, created_at, updated_at, is_deleted, roles
-            ) VALUES (?, ?, ?, ?, ?, 0, NULL, NOW(), NOW(), false, '["USER"]')
+                failed_attempts, lockout_until, created_at, updated_at, is_deleted
+            ) VALUES (?, ?, ?, ?, ?, 0, NULL, NOW(), NOW(), false)
+            """;
+            
+        String roleQuery = """
+            INSERT INTO user_roles (user_id, role_id)
+            SELECT ?, role_id FROM roles WHERE role_name = 'USER'
             """;
         
         try {
             handleTransaction(connection, () -> {
-                try (PreparedStatement statement = connection.prepareStatement(query)) {
-                    statement.setString(1, username);
-                    statement.setString(2, passwordHash);
-                    statement.setString(3, salt);
-                    statement.setString(4, name);
-                    statement.setString(5, email);
+                try (PreparedStatement userStatement = connection.prepareStatement(userQuery, PreparedStatement.RETURN_GENERATED_KEYS);
+                     PreparedStatement roleStatement = connection.prepareStatement(roleQuery)) {
                     
-                    int rowsInserted = statement.executeUpdate();
+                    // Insert user
+                    userStatement.setString(1, username);
+                    userStatement.setString(2, passwordHash);
+                    userStatement.setString(3, salt);
+                    userStatement.setString(4, name);
+                    userStatement.setString(5, email);
+                    
+                    int rowsInserted = userStatement.executeUpdate();
                     if (rowsInserted > 0) {
-                        logger.log(Level.INFO, "User successfully registered: " + username);
+                        // Get generated user ID
+                        try (ResultSet generatedKeys = userStatement.getGeneratedKeys()) {
+                            if (generatedKeys.next()) {
+                                int userId = generatedKeys.getInt(1);
+                                
+                                // Insert default USER role
+                                roleStatement.setInt(1, userId);
+                                roleStatement.executeUpdate();
+                                
+                                logger.log(Level.INFO, "User successfully registered: " + username);
+                            }
+                        }
                     }
                 } catch (SQLException e) {
                     throw new RuntimeException("Database error during signup", e);
@@ -171,36 +203,12 @@ public class UserService {
     }
 
     private static boolean isPasswordStrong(String password) {
-        if (password == null) {
-            logger.log(Level.WARNING, "Password cannot be null");
+        String validationResult = PasswordUtils.validatePasswordStrength(password);
+        if (validationResult != null) {
+            logger.log(Level.WARNING, validationResult);
             return false;
         }
-        
-        if (password.length() < MIN_PASSWORD_LENGTH) {
-            logger.log(Level.WARNING, "Password must be at least " + MIN_PASSWORD_LENGTH + " characters");
-            return false;
-        }
-        
-        // Check individual requirements
-        boolean hasLower = password.matches(".*[a-z].*");
-        boolean hasUpper = password.matches(".*[A-Z].*");
-        boolean hasDigit = password.matches(".*\\d.*");
-        boolean hasSpecial = password.matches(".*[@#$%^&+=].*");
-        
-        if (!hasLower) {
-            logger.log(Level.WARNING, "Password must contain at least one lowercase letter");
-        }
-        if (!hasUpper) {
-            logger.log(Level.WARNING, "Password must contain at least one uppercase letter");
-        }
-        if (!hasDigit) {
-            logger.log(Level.WARNING, "Password must contain at least one digit");
-        }
-        if (!hasSpecial) {
-            logger.log(Level.WARNING, "Password must contain at least one special character (@#$%^&+=)");
-        }
-        
-        return hasLower && hasUpper && hasDigit && hasSpecial;
+        return true;
     }
 
     private static void handleTransaction(Connection connection, Runnable operation) throws SQLException {

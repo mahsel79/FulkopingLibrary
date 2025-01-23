@@ -7,6 +7,13 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 public class PasswordUtils {
+    
+    public static final String PASSWORD_REQUIREMENTS = 
+        "Password must be at least 8 characters long and contain:\n" +
+        "- At least one uppercase letter (A-Z)\n" +
+        "- At least one lowercase letter (a-z)\n" +
+        "- At least one number (0-9)\n" +
+        "- At least one special character (!@#$%^&*)";
 
     // Generate a random salt
     public static String generateSalt() {
@@ -42,6 +49,32 @@ public class PasswordUtils {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("MD5 algorithm not available", e);
         }
+    }
+
+    public static String validatePasswordStrength(String password) {
+        if (password == null || password.length() < 8) {
+            return "Password must be at least 8 characters long";
+        }
+        
+        boolean hasUppercase = !password.equals(password.toLowerCase());
+        boolean hasLowercase = !password.equals(password.toUpperCase());
+        boolean hasNumber = password.matches(".*\\d.*");
+        boolean hasSpecial = password.matches(".*[!@#$%^&*].*");
+        
+        if (!hasUppercase) {
+            return "Password must contain at least one uppercase letter (A-Z)";
+        }
+        if (!hasLowercase) {
+            return "Password must contain at least one lowercase letter (a-z)";
+        }
+        if (!hasNumber) {
+            return "Password must contain at least one number (0-9)";
+        }
+        if (!hasSpecial) {
+            return "Password must contain at least one special character (!@#$%^&*)";
+        }
+        
+        return null; // null means password meets all requirements
     }
 
     public static void main(String[] args) {
