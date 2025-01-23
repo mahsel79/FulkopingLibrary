@@ -23,9 +23,11 @@ import se.fulkopinglibrary.fulkopinglibrary.models.MediaItem;
 
 import java.util.ArrayList;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Date;
 import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Logger;
@@ -121,6 +123,86 @@ public class LibraryApp {
     }
 
 
+    private static LibraryItem mapResultSetToItem(ResultSet rs) throws SQLException {
+        String type = rs.getString("type");
+        LibraryItem item = null;
+        
+        switch (type) {
+            case "BOOK":
+                item = new Book(
+                    rs.getInt("id"),
+                    rs.getString("title"),
+                    rs.getString("author"),
+                    rs.getString("isbn"),
+                    rs.getBoolean("available")
+                );
+                break;
+            case "MAGAZINE":
+                item = new Magazine(
+                    rs.getInt("id"),
+                    rs.getString("title"),
+                    rs.getString("publisher"),
+                    rs.getString("issn"),
+                    rs.getBoolean("available")
+                );
+                break;
+            case "MEDIA":
+                item = new MediaItem(
+                    rs.getInt("id"),
+                    rs.getString("title"),
+                    rs.getBoolean("available"),
+                    rs.getString("director"),
+                    rs.getString("catalog_number"),
+                    null // mediaType can be null initially
+                );
+                break;
+            default:
+                throw new SQLException("Unknown item type: " + type);
+        }
+        
+        // Set reservation date if present
+        Date reservationDate = rs.getDate("reservation_date");
+        if (reservationDate != null) {
+            item.setReservationDate(reservationDate.toLocalDate());
+        }
+        
+        return item;
+    }
+
+    private static void viewReservations() {
+        try (Connection connection = DatabaseConnection.getConnection()) {
+            String query = """
+                SELECT * FROM items 
+                WHERE reservation_date IS NOT NULL
+                ORDER BY reservation_date DESC
+                """;
+                
+            try (PreparedStatement statement = connection.prepareStatement(query);
+                 ResultSet rs = statement.executeQuery()) {
+                
+                System.out.println("\n--- Current Reservations ---");
+                boolean hasReservations = false;
+                
+                while (rs.next()) {
+                    hasReservations = true;
+                    LibraryItem item = mapResultSetToItem(rs);
+                    if (item != null) {
+                        System.out.printf("%s (ID: %d) - Reserved on: %s%n",
+                            item.getTitle(),
+                            item.getId(),
+                            item.getReservationDate());
+                    }
+                }
+                
+                if (!hasReservations) {
+                    System.out.println("No current reservations found.");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving reservations: " + e.getMessage());
+        }
+    }
+
     private static void displayItems(String category, List<? extends LibraryItem> items) {
         if (items.isEmpty()) {
             System.out.println("\nNo " + category.toLowerCase() + " found.");
@@ -177,8 +259,9 @@ public class LibraryApp {
             System.out.println("4. Return");
             System.out.println("5. View Loan History");
             System.out.println("6. View Current Loans");
-            System.out.println("7. Update Profile");
-            System.out.println("8. Logout");
+            System.out.println("7. View Current Reservations");
+            System.out.println("8. Update Profile");
+            System.out.println("9. Logout");
             System.out.print("Choose an option: ");
             int choice = scanner.nextInt();
             scanner.nextLine(); // Consume newline
@@ -341,13 +424,14 @@ public class LibraryApp {
                     case 5:
                         viewLoanHistory(connection, user.getUserId());
                         break;
-                    case 6:
-                        viewCurrentLoans(connection, user.getUserId());
-                        break;
-                    case 7:
+            case 7:
+                System.out.println("7. View Current Reservations");
+                viewReservations();
+                break;
+                    case 8:
                         updateProfile(connection, user.getUserId(), scanner);
                         break;
-                    case 8:
+                    case 9:
                         loggedIn = false;
                         logger.info("User logged out successfully");
                         System.out.println("Logged out successfully.");

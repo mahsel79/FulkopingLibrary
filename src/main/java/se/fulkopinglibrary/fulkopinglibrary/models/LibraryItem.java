@@ -1,16 +1,21 @@
 package se.fulkopinglibrary.fulkopinglibrary.models;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+
 
 /**
  * Base class for all library items with common properties
  */
 public abstract class LibraryItem {
+    private static final int RESERVATION_PERIOD_DAYS = 30;
+    
     private final int id;
     private final String title;
     private boolean isAvailable;
     private LocalDate loanDate;
     private LocalDate returnDate;
+    private LocalDate reservationDate;
     protected MediaType mediaType;
     protected ItemType type;
     private int loanPeriodDays;
@@ -96,6 +101,21 @@ public abstract class LibraryItem {
         this.type = type;
     }
 
+    public LocalDate getReservationDate() {
+        return reservationDate;
+    }
+
+    public void setReservationDate(LocalDate reservationDate) {
+        this.reservationDate = reservationDate;
+    }
+
+    public LocalDate getReservationExpirationDate() {
+        if (reservationDate == null) {
+            return null;
+        }
+        return reservationDate.plus(RESERVATION_PERIOD_DAYS, ChronoUnit.DAYS);
+    }
+
     public int getLoanDurationDays() {
         return mediaType != null ? mediaType.getLoanDurationDays() : loanPeriodDays;
     }
@@ -108,6 +128,8 @@ public abstract class LibraryItem {
                 ", isAvailable=" + isAvailable +
                 ", loanDate=" + loanDate +
                 ", returnDate=" + returnDate +
+                ", reservationDate=" + reservationDate +
+                ", reservationExpires=" + getReservationExpirationDate() +
                 ", loanDurationDays=" + getLoanDurationDays() +
                 '}';
     }

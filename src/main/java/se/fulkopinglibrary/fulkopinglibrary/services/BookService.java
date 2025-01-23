@@ -503,4 +503,63 @@ public class BookService {
         }
         return items;
     }
+
+    public static List<LibraryItem> viewCurrentReservations(Connection connection, int userId) {
+        List<LibraryItem> reservations = new ArrayList<>();
+        String query = """
+            SELECT li.*, r.reservation_date 
+            FROM library_items li
+            JOIN reservations r ON li.item_id = r.item_id
+            WHERE r.user_id = ?
+            ORDER BY r.reservation_date DESC""";
+        
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                String type = rs.getString("type");
+                LibraryItem item = null;
+                
+                switch (type) {
+                    case "BOOK":
+                        item = new Book(
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getString("author"),
+                            rs.getString("isbn"),
+                            rs.getBoolean("is_available")
+                        );
+                        break;
+                    case "MAGAZINE":
+                        item = new Magazine(
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getString("publisher"),
+                            rs.getString("issn"),
+                            rs.getBoolean("is_available")
+                        );
+                        break;
+                    case "MEDIA":
+                        item = new MediaItem(
+                            rs.getInt("item_id"),
+                            rs.getString("title"),
+                            rs.getBoolean("is_available"),
+                            rs.getString("director"),
+                            rs.getString("catalog_number"),
+                            getMediaType(connection, rs.getInt("media_type_id"))
+                        );
+                        break;
+                }
+                
+                if (item != null) {
+                    item.setReservationDate(rs.getDate("reservation_date").toLocalDate());
+                    reservations.add(item);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return reservations;
+    }
 }
