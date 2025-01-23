@@ -139,8 +139,11 @@ public class SearchUtils {
     // Perform media search
     private static void performMediaSearch(Connection connection, String searchTerm, String searchType) {
         try {
-            List<MediaItem> filteredMedia = MediaService.getAllItems(connection).stream()
-                .filter(media -> {
+            List<LibraryItem> filteredMedia = MediaService.getAllItems(connection).stream()
+                .filter(item -> {
+                    if (!(item instanceof MediaItem media)) {
+                        return false;
+                    }
                     switch (searchType) {
                         case "title":
                             return media.getTitle().toLowerCase().contains(searchTerm.toLowerCase());

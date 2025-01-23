@@ -16,7 +16,6 @@ import se.fulkopinglibrary.fulkopinglibrary.services.UserService;
 import se.fulkopinglibrary.fulkopinglibrary.services.BookService;
 import se.fulkopinglibrary.fulkopinglibrary.services.MagazineService;
 import se.fulkopinglibrary.fulkopinglibrary.services.MediaService;
-import se.fulkopinglibrary.fulkopinglibrary.utils.SearchUtils;
 import se.fulkopinglibrary.fulkopinglibrary.models.Book;
 import se.fulkopinglibrary.fulkopinglibrary.models.LibraryItem;
 import se.fulkopinglibrary.fulkopinglibrary.models.Magazine;
@@ -197,7 +196,41 @@ public class LibraryApp {
                         exploreMenu(scanner);
                         break;
                     case 3:
-                        borrowBook(connection, user.getUserId(), scanner);
+                        boolean inBorrowMenu = true;
+                        while (inBorrowMenu) {
+                            System.out.println("\n=== Borrow Menu ===");
+                            System.out.println("1. Borrow a Book");
+                            System.out.println("2. Borrow a Magazine");
+                            System.out.println("3. Borrow Media Item");
+                            System.out.println("4. Back to User Menu");
+                            System.out.print("Choose an option: ");
+                            
+                            int borrowChoice = scanner.nextInt();
+                            scanner.nextLine(); // Consume newline
+                            
+                            switch (borrowChoice) {
+                                case 1:
+                    borrowBook(connection, user.getUserId(), scanner);
+                    break;
+                case 2:
+                    System.out.print("Enter Magazine ID to borrow: ");
+                    int magazineId = scanner.nextInt();
+                    MagazineService.borrowMagazine(connection, user.getUserId(), magazineId);
+                    break;
+                case 3:
+                    System.out.print("Enter Media ID to borrow: ");
+                    int mediaId = scanner.nextInt();
+                    MediaService.borrowMedia(connection, user.getUserId(), mediaId);
+                                    break;
+                                case 4:
+                                    inBorrowMenu = false;
+                                    logger.info("Returning to user menu");
+                                    break;
+                                default:
+                                    logger.warning("Invalid option in borrow menu");
+                                    System.out.println("Invalid option. Try again.");
+                            }
+                        }
                         break;
                     case 4:
                         returnBook(connection, user.getUserId(), scanner);
@@ -231,33 +264,79 @@ public class LibraryApp {
         }
     }
 
-    private static void borrowBook(Connection connection, int userId, Scanner scanner) {
-        System.out.print("Enter the ID of the book you want to borrow: ");
-        int bookId = scanner.nextInt();
-        scanner.nextLine(); // Consume newline
+    private static void borrowItem(Connection connection, int userId, Scanner scanner, String itemType, Runnable borrowAction) {
+        try {
+            System.out.printf("Enter the ID of the %s you want to borrow: ", itemType);
+            int itemId = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
+            
+            borrowAction.run();
+            
+            logger.info(String.format("%s borrowed successfully: user=%d, item=%d", 
+                itemType, userId, itemId));
+            System.out.println(itemType + " borrowed successfully!");
+        } catch (Exception e) {
+            logger.severe(String.format("Error borrowing %s: %s", itemType, e.getMessage()));
+            System.out.println("Failed to borrow " + itemType.toLowerCase() + ". Please check the ID and availability.");
+        }
+    }
 
-        boolean success = BookService.borrowBook(connection, userId, bookId);
-        if (success) {
-            logger.info("Book borrowed successfully: user=" + userId + ", book=" + bookId);
-            System.out.println("Book borrowed successfully!");
-        } else {
-            logger.warning("Failed to borrow book: user=" + userId + ", book=" + bookId);
-            System.out.println("Failed to borrow the book. It may not be available.");
+    private static void borrowBook(Connection connection, int userId, Scanner scanner) {
+        try {
+            int bookId = -1;
+            while (bookId < 0) {
+                try {
+                    System.out.print("Enter the ID of the book you want to borrow: ");
+                    if (scanner.hasNextInt()) {
+                        bookId = scanner.nextInt();
+                        if (bookId < 0) {
+                            System.out.println("Invalid ID. Please enter a positive number.");
+                        }
+                    } else {
+                        System.out.println("Invalid input. Please enter a number.");
+                        scanner.next(); // Clear invalid input
+                    }
+                } catch (Exception e) {
+                    System.out.println("Invalid input. Please try again.");
+                    scanner.nextLine(); // Clear the buffer
+                }
+            }
+            scanner.nextLine(); // Consume newline
+
+            boolean success = BookService.borrowBook(connection, userId, bookId);
+            if (success) {
+                logger.info("Book borrowed successfully: user=" + userId + ", book=" + bookId);
+                System.out.println("Book borrowed successfully!");
+            } else {
+                logger.warning("Failed to borrow book: user=" + userId + ", book=" + bookId);
+                System.out.println("Failed to borrow the book. It may not be available.");
+            }
+        } finally {
+            try {
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                logger.warning("Error closing connection in borrowBook: " + e.getMessage());
+            }
         }
     }
 
     private static void returnBook(Connection connection, int userId, Scanner scanner) {
-        System.out.print("Enter the ID of the loan you want to return: ");
-        int loanId = scanner.nextInt();
-        scanner.nextLine(); // Consume newline
+        try {
+            System.out.print("Enter the ID of the loan to return: ");
+            int loanId = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
 
-        boolean success = BookService.returnBook(connection, loanId);
-        if (success) {
-            logger.info("Book returned successfully: loan=" + loanId);
-            System.out.println("Book returned successfully!");
-        } else {
-            logger.warning("Failed to return book: loan=" + loanId);
-            System.out.println("Failed to return the book. Please check the loan ID.");
+            boolean success = BookService.returnBook(connection, loanId);
+            if (success) {
+                logger.info("Book returned successfully: user=" + userId + ", loan=" + loanId);
+                System.out.println("Book returned successfully!");
+            } else {
+                logger.warning("Failed to return book: loan=" + loanId);
+                System.out.println("Failed to return the book. Please check the loan ID.");
+            }
+        } catch (Exception e) {
+            logger.severe("Error returning book: " + e.getMessage());
+            System.out.println("An error occurred while returning the book.");
         }
     }
 
@@ -588,11 +667,11 @@ public class LibraryApp {
                         List<Magazine> magazines = MagazineService.getAllItems(connection);
                         displayItems("Magazines", magazines);
                         break;
-                    case 3:
-                        logger.info("Browsing media...");
-                        List<MediaItem> media = MediaService.getAllItems(connection);
-                        displayItems("Media", new ArrayList<>(media));
-                        break;
+                case 3:
+                    logger.info("Browsing media...");
+                    List<LibraryItem> media = MediaService.getAllItems(connection);
+                    displayItems("Media", media);
+                    break;
                     case 4:
                         exploring = false;
                         logger.info("Returning to main menu");

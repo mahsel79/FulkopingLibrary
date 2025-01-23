@@ -7,8 +7,34 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
+import se.fulkopinglibrary.fulkopinglibrary.utils.LoggerUtil;
 
 public class MagazineService {
+    public static boolean borrowMagazine(Connection connection, int userId, int magazineId) {
+        try {
+            String sql = "UPDATE magazine_items SET available = false WHERE id = ?";
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setInt(1, magazineId);
+                int affectedRows = pstmt.executeUpdate();
+                
+                if (affectedRows > 0) {
+                    sql = "INSERT INTO magazine_loans (user_id, item_id, loan_date) VALUES (?, ?, CURRENT_DATE)";
+                    try (PreparedStatement loanStmt = connection.prepareStatement(sql)) {
+                        loanStmt.setInt(1, userId);
+                        loanStmt.setInt(2, magazineId);
+                        loanStmt.executeUpdate();
+                    }
+                    return true;
+                }
+            }
+            return false;
+        } catch (SQLException e) {
+            LoggerUtil.getLogger(MagazineService.class).severe("Error borrowing magazine: " + e.getMessage());
+            return false;
+        }
+    }
+    private static final Logger logger = LoggerUtil.getLogger(MagazineService.class);
 
     public static List<Magazine> getAllItems(Connection connection) throws SQLException {
         return getAllItems(connection, 0, 1, 20);
@@ -96,4 +122,5 @@ public class MagazineService {
         }
         return magazines;
     }
+
 }

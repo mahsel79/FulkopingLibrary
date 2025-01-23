@@ -277,9 +277,14 @@ Hash: tfaCmJiNhdasksbXCq5RkXIi3yTNYvNwg6/HLVxtWeE=
    ```
 ---
 ### **5. Run the Application**
+- IntelliJ IDEA
 1. Open the `LibraryApp.java` file.
 2. Right-click and select **Run 'LibraryApp.main()'**.
 3. Use the console to interact with the application.
+
+- VSCode IDEA
+1. From root folder using Powershell excute:
+   ./mvnw clean package && java -jar target/FulkopingLibrary-1.0-SNAPSHOT-jar-with-dependencies.jar
 ---
 ### **6. Example Workflow**
 1. **Login**:
